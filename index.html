@@ -259,34 +259,34 @@ DevOps & CI/CD: Azure DevOps, Git, GitHub, YAML Pipelines, CI/CD, pytest, Agile/
 Databases & Integration: PostgreSQL, MySQL, REST APIs, JSON, Pandas, NumPy, T-SQL Stored Procedures
 Governance & Quality: Data Governance, Data Lineage, Data Quality, Data Security, Schema Validation`;
 
-/* ── SEED JOBS (real roles targeting entry-level/intern for RP's profile) ── */
+/* ── SEED JOBS — STRICTLY intern / co-op / 0-2yr only ── */
 const NOW = Date.now();
 const hrs = h => NOW - h*3600000;
 const SEED_JOBS = [
-  {id:"j1",role:"Data Engineering Intern",company:"Microsoft",loc:"Remote",pay:"$35–45/hr",src:"LinkedIn",board:"Greenhouse",score:9,
-   url:"https://jobs.careers.microsoft.com/global/en/search?q=data+engineering+intern&lc=United%20States&l=en_us&pgSz=20&o=Relevance&flt=true",
-   applied:false,tailored:null,postedAt:hrs(3)},
-  {id:"j7",role:"Data Platform Intern",company:"Ramp",loc:"Remote",pay:"$40/hr",src:"Lever",board:"Lever",score:9,
-   url:"https://jobs.lever.co/ramp",
-   applied:false,tailored:null,postedAt:hrs(11)},
-  {id:"j2",role:"Junior Data Engineer",company:"Databricks",loc:"Remote",pay:"$90k–110k",src:"Lever",board:"Lever",score:9,
-   url:"https://www.databricks.com/company/careers/open-positions?department=Data+%26+Analytics&location=Remote",
-   applied:false,tailored:null,postedAt:hrs(26)},
-  {id:"j3",role:"Data Engineer I",company:"Snowflake",loc:"Remote",pay:"$85k–105k",src:"Glassdoor",board:"Greenhouse",score:9,
-   url:"https://careers.snowflake.com/us/en/search-results?keywords=data+engineer",
-   applied:false,tailored:null,postedAt:hrs(49)},
-  {id:"j5",role:"Cloud Data Engineer (Entry)",company:"Deloitte",loc:"Milwaukee, WI",pay:"$80k–100k",src:"Dice",board:"Workday",score:8,
-   url:"https://apply.deloitte.com/careers/SearchJobs/data%20engineer?listFilterMode=1&jobOffset=0",
-   applied:false,tailored:null,postedAt:hrs(72)},
-  {id:"j4",role:"Associate Data Engineer",company:"Accenture",loc:"Chicago, IL",pay:"$75k–95k",src:"Indeed",board:"Workday",score:8,
-   url:"https://www.accenture.com/us-en/careers/jobsearch?jk=data+engineer&l=Chicago%2C+IL&c=Technology",
-   applied:false,tailored:null,postedAt:hrs(98)},
-  {id:"j8",role:"Analytics Engineer (Entry)",company:"dbt Labs",loc:"Remote",pay:"$80k–95k",src:"Greenhouse",board:"Greenhouse",score:8,
-   url:"https://boards.greenhouse.io/dbtlabsinc",
-   applied:false,tailored:null,postedAt:hrs(130)},
-  {id:"j6",role:"ETL Developer (Junior)",company:"Target",loc:"Minneapolis, MN",pay:"$72k–88k",src:"Wellfound",board:"Greenhouse",score:8,
-   url:"https://jobs.target.com/search-jobs/data%20engineer/1118/1",
-   applied:false,tailored:null,postedAt:hrs(168)}
+  {id:"j1",role:"Data Engineering Co-op",company:"Microsoft",loc:"Remote / Redmond WA",pay:"$35–45/hr",src:"Microsoft Careers",board:"Microsoft",score:9,
+   url:"https://jobs.careers.microsoft.com/global/en/search?q=data+engineer+intern+co-op&exp=Internship&l=en_us&pg=1&pgSz=20&o=Relevance&flt=true",
+   referral:"careers@microsoft.com",applied:false,tailored:null,postedAt:hrs(3)},
+  {id:"j2",role:"Data Platform Intern",company:"Ramp",loc:"Remote",pay:"$40–50/hr",src:"Lever",board:"Lever",score:9,
+   url:"https://jobs.lever.co/ramp?commitment=Internship",
+   referral:"jobs@ramp.com",applied:false,tailored:null,postedAt:hrs(8)},
+  {id:"j3",role:"Data Engineering Intern",company:"Databricks",loc:"Remote",pay:"$45–55/hr",src:"Databricks Careers",board:"Greenhouse",score:9,
+   url:"https://www.databricks.com/company/careers/open-positions?department=University+Recruiting&location=all",
+   referral:"university@databricks.com",applied:false,tailored:null,postedAt:hrs(14)},
+  {id:"j4",role:"Data Engineer Co-op (0-2 yrs)",company:"Snowflake",loc:"Remote",pay:"$38–48/hr",src:"Snowflake Careers",board:"Greenhouse",score:9,
+   url:"https://careers.snowflake.com/us/en/search-results?keywords=intern+co-op+data+engineer&employment_type=Intern",
+   referral:"university-recruiting@snowflake.com",applied:false,tailored:null,postedAt:hrs(22)},
+  {id:"j5",role:"Analytics Engineering Intern",company:"dbt Labs",loc:"Remote",pay:"$35–40/hr",src:"Greenhouse",board:"Greenhouse",score:9,
+   url:"https://boards.greenhouse.io/dbtlabsinc#open-positions",
+   referral:"hiring@dbtlabs.com",applied:false,tailored:null,postedAt:hrs(36)},
+  {id:"j6",role:"Data Engineer Intern",company:"Target",loc:"Minneapolis MN",pay:"$30–38/hr",src:"Target Careers",board:"Workday",score:8,
+   url:"https://jobs.target.com/search-jobs?k=data+engineer+intern&ascf=[{%22key%22:%22custom_fields.Job+Category%22,%22value%22:%22Internships%22}]",
+   referral:"campus@target.com",applied:false,tailored:null,postedAt:hrs(48)},
+  {id:"j7",role:"Cloud Data Co-op (Entry)",company:"Deloitte",loc:"Milwaukee WI / Remote",pay:"$28–35/hr",src:"Deloitte Careers",board:"Workday",score:8,
+   url:"https://apply.deloitte.com/careers/SearchJobs/data%20co-op?listFilterMode=1",
+   referral:"uscampusrecruiting@deloitte.com",applied:false,tailored:null,postedAt:hrs(60)},
+  {id:"j8",role:"Data Engineering Intern (0-1 yr)",company:"Accenture",loc:"Chicago IL / Remote",pay:"$25–32/hr",src:"Indeed",board:"Workday",score:8,
+   url:"https://www.accenture.com/us-en/careers/jobsearch?jk=data+engineer+intern&sc=0&c=Technology&l=Chicago%2C+IL",
+   referral:"campus.recruiting@accenture.com",applied:false,tailored:null,postedAt:hrs(80)}
 ];
 
 /* ── STATE ── */
@@ -296,6 +296,8 @@ const S = {
   unlocked: false,
   gateOpen: false,
   gateStep: "email",
+  showReferral: false,
+  referralJob: null,
   jobs: [...SEED_JOBS],
   apps: [],
   searched: false,
@@ -660,7 +662,7 @@ function renderDashboard(){
     <button class="${S.tab==="profile"?"on":""}" onclick="setTab('profile')">My profile</button>
   </div>
   ${body}
-</div>`;
+</div>${S.showReferral ? renderReferralModal() : ''}`;
 }
 
 /* ── JOB AGE HELPER ── */
@@ -696,6 +698,95 @@ function renderHunter(){
   ${sorted.map(j=>jobCard(j, true)).join("")}`;
 }
 
+/* ── REFERRAL EMAIL ── */
+function askReferral(id){
+  const j = S.jobs.find(x=>x.id===id)||S.apps.find(x=>x.id===id);
+  if(!j) return;
+  S.referralJob = j;
+  S.showReferral = true;
+  render();
+}
+async function sendReferral(){
+  const j = S.referralJob;
+  const note = document.getElementById("ref-note")?.value?.trim()||"";
+  const btn  = document.getElementById("ref-send-btn");
+  if(!j) return;
+  btn.disabled=true; btn.textContent="Sending…";
+
+  const subject = `Referral Request — ${j.role} at ${j.company}`;
+  const body = `Hi,
+
+I came across the ${j.role} opening at ${j.company} and noticed you work there. I'm a Data Engineer with 3+ years of production experience on Azure, Databricks, PySpark, and Delta Lake — currently completing my MS in Computer Science at Concordia University Wisconsin (Dec 2026).
+
+${note ? note+'\n\n' : ''}I would really appreciate a referral or any guidance on the application process. My portfolio is at https://career-engine-brown.vercel.app and I'm happy to share my resume.
+
+Thank you for your time!
+Rajasekhar Polepalli
+rajasekhar.polepalli5@gmail.com | +1 (414) 436-4320`;
+
+  const mailtoUrl = `mailto:${j.referral||''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(mailtoUrl, '_blank');
+  j.referralSent = true;
+  S.showReferral = false;
+  render();
+}
+
+function renderReferralModal(){
+  const j = S.referralJob;
+  if(!j) return '';
+  return `<div class="overlay" onclick="if(event.target===this){S.showReferral=false;render()}">
+  <div class="gate-box" style="max-width:460px;text-align:left">
+    <button class="close-x" onclick="S.showReferral=false;render()">×</button>
+    <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px">Ask for a referral</div>
+    <p style="color:rgba(255,255,255,.5);font-size:13.5px;margin-bottom:16px">
+      ${esc(j.role)} at ${esc(j.company)} · Sending to <strong style="color:#06d6a0">${esc(j.referral||'recruiter')}</strong>
+    </p>
+    <label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);display:block;margin-bottom:6px">ADD A PERSONAL NOTE (optional)</label>
+    <textarea id="ref-note" rows="3" placeholder="e.g. I saw your post about the team and was really interested in..."
+      style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 13px;color:#fff;font-size:13.5px;resize:vertical;outline:none;margin-bottom:12px"></textarea>
+    <button class="btn" id="ref-send-btn" style="width:100%" onclick="sendReferral()">Open email draft →</button>
+    <p style="font-size:11.5px;color:rgba(255,255,255,.3);margin-top:8px;text-align:center">Opens your email client with a pre-filled referral request. You review and send.</p>
+  </div></div>`;
+}
+
+/* ── AUTO-APPLY BRIDGE ── */
+function autoApply(id){
+  const j = S.jobs.find(x=>x.id===id)||S.apps.find(x=>x.id===id);
+  if(!j) return;
+  // Open job URL and signal extension
+  const tab = window.open(j.url, '_blank');
+  // Post message to extension via localStorage bridge
+  localStorage.setItem('ce_autofill', JSON.stringify({
+    action: 'autofill',
+    jobId: j.id,
+    role: j.role,
+    company: j.company,
+    url: j.url,
+    profile: {
+      firstName: 'Rajasekhar',
+      lastName: 'Polepalli',
+      email: 'rajasekharpolepalli5@gmail.com',
+      phone: '+14144364320',
+      location: 'Wauwatosa, WI',
+      linkedin: 'https://linkedin.com/in/rajasekharpolepalli-0806793a3',
+      website: 'https://career-engine-brown.vercel.app',
+      university: 'Concordia University Wisconsin',
+      degree: 'Master of Science in Computer Science',
+      gradYear: '2026',
+      yearsExp: '3',
+      summary: 'Data engineer with 3+ years on Azure, Databricks, PySpark, Delta Lake. MS CS candidate Dec 2026.'
+    },
+    ts: Date.now()
+  }));
+  markApplied(id);
+  // Show instructions if extension not installed
+  setTimeout(()=>{
+    if(!localStorage.getItem('ce_ext_ack')){
+      alert('Extension not detected. Install the Career Engine Chrome Extension to auto-fill forms.\n\nFor now: the job page has opened — fill manually or install the extension.');
+    }
+  }, 2000);
+}
+
 /* ── JOB CARD ── */
 function jobCard(j, fromFeed){
   const col = j.score>=9?"var(--green)":j.score>=7?"var(--amber)":"var(--muted)";
@@ -728,8 +819,11 @@ function jobCard(j, fromFeed){
     ${j.tailored ? renderTailoredResume(j.tailored) : ""}
     <div class="jacts">
       <button onclick="tailorJob('${j.id}',this)">${j.tailored?"Re-tailor":"✦ Tailor resume"}</button>
-      ${j.url?`<a class="apply-btn" href="${esc(j.url)}" target="_blank" rel="noopener" onclick="markApplied('${j.id}')">Apply →</a>`:""}
+      ${j.url?`<button class="apply-btn" onclick="autoApply('${j.id}')">⚡ Auto-Apply</button>`:""}
+      ${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener" style="font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--d-line);background:var(--d-surface);color:var(--d-ink2);font-weight:600;text-decoration:none;display:inline-block">Open posting ↗</a>`:""}
+      ${j.referral?`<button onclick="askReferral('${j.id}')" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3">✉ Ask referral</button>`:""}
       ${!j.applied&&fromFeed?`<button onclick="markApplied('${j.id}')">Mark applied</button>`:""}
+      ${j.referralSent?`<span class="pill pill-b">Referral sent ✓</span>`:""}
     </div>
   </div>`;
 }
@@ -780,7 +874,7 @@ async function tailorJob(id, btn){
 
 TARGET ROLE: ${j.role} at ${j.company}
 CANDIDATE: Rajasekhar Polepalli — 3+ years Data Engineer, Azure/Databricks/PySpark specialist
-STRATEGY: This is a ${j.role.toLowerCase().includes("intern")?"internship":"entry-level/1-year-exp"} role being targeted deliberately. Tailor the resume to appear as a strong match — emphasize fundamentals, learning agility, and relevant production experience without overselling seniority.
+STRATEGY: This is a ${j.role.toLowerCase().includes("intern")||j.role.toLowerCase().includes("co-op")?"internship/co-op":"0-2 year entry-level"} role. Rajasekhar has 3+ years experience but is DELIBERATELY targeting intern/co-op/0-2yr roles for maximum callback rate as an international student (F-1 OPT). Tailor to emphasize: strong fundamentals, MS CS student status (Dec 2026 grad), eagerness to contribute, Azure/PySpark skills — NOT seniority. Do NOT mention 3+ years prominently. Frame as a motivated grad student with solid production background.
 
 Return ONLY valid JSON (no markdown, no backticks):
 {
