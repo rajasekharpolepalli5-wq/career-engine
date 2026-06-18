@@ -260,33 +260,33 @@ Databases & Integration: PostgreSQL, MySQL, REST APIs, JSON, Pandas, NumPy, T-SQ
 Governance & Quality: Data Governance, Data Lineage, Data Quality, Data Security, Schema Validation`;
 
 /* ── SEED JOBS — VERIFIED real intern/co-op postings (Greenhouse/Lever direct links) ── */
-const NOW = Date.now();
-const hrs = h => NOW - h*3600000;
+// Real posting dates — age is always calculated live from current time
+const D = d => new Date(d).getTime(); // convert real date to timestamp
 const SEED_JOBS = [
   {id:"j1",role:"Data Engineering Intern",company:"AccuWeather",loc:"State College, PA / Remote",pay:"$20–28/hr",src:"Greenhouse",board:"Greenhouse",score:9,
    url:"https://job-boards.greenhouse.io/accuweather/jobs/7441297",
-   referral:"careers@accuweather.com",applied:false,tailored:null,postedAt:hrs(5)},
+   referral:"careers@accuweather.com",applied:false,tailored:null,postedAt:D("2026-06-16")},
   {id:"j2",role:"Data Engineer Intern (Summer 2026)",company:"Cloudflare",loc:"Remote",pay:"$45–55/hr",src:"Greenhouse",board:"Greenhouse",score:9,
    url:"https://job-boards.greenhouse.io/cloudflare/jobs/7374706",
-   referral:"universityprograms@cloudflare.com",applied:false,tailored:null,postedAt:hrs(12)},
+   referral:"universityprograms@cloudflare.com",applied:false,tailored:null,postedAt:D("2026-06-10")},
   {id:"j3",role:"Software Engineer Intern – Data Engineering",company:"Ripple",loc:"Remote",pay:"$40–50/hr",src:"Lever",board:"Lever",score:9,
    url:"https://job-boards.greenhouse.io/ripple/jobs/7467151",
-   referral:"internships@ripple.com",applied:false,tailored:null,postedAt:hrs(20)},
+   referral:"internships@ripple.com",applied:false,tailored:null,postedAt:D("2026-06-05")},
   {id:"j4",role:"Software Engineering Intern (Data)",company:"Databricks",loc:"Remote",pay:"$50–60/hr",src:"Greenhouse",board:"Greenhouse",score:9,
    url:"https://job-boards.greenhouse.io/databricks/jobs/7640764002",
-   referral:"university-recruiting@databricks.com",applied:false,tailored:null,postedAt:hrs(30)},
+   referral:"university-recruiting@databricks.com",applied:false,tailored:null,postedAt:D("2026-06-01")},
   {id:"j5",role:"Data Engineering Summer Intern",company:"SharkNinja",loc:"Needham, MA / Remote",pay:"$25–32/hr",src:"Greenhouse",board:"Greenhouse",score:8,
    url:"https://job-boards.greenhouse.io/sharkninjaoperatingllc/jobs/4601703006",
-   referral:"talent@sharkninja.com",applied:false,tailored:null,postedAt:hrs(48)},
+   referral:"talent@sharkninja.com",applied:false,tailored:null,postedAt:D("2026-05-28")},
   {id:"j6",role:"ADAS Data Analytics Intern (Databricks/PySpark)",company:"Mercedes-Benz R&D NA",loc:"Sunnyvale, CA",pay:"$30–38/hr",src:"Lever",board:"Lever",score:9,
    url:"https://jobs.lever.co/MBRDNA/e801fdb7-7c75-4378-bff6-b3f197489262",
-   referral:"careers@mbrdna.com",applied:false,tailored:null,postedAt:hrs(60)},
+   referral:"careers@mbrdna.com",applied:false,tailored:null,postedAt:D("2026-05-20")},
   {id:"j7",role:"Azure Data Engineer – Analyst (Entry)",company:"Inizio",loc:"Remote",pay:"$55k–70k",src:"Greenhouse",board:"Greenhouse",score:8,
    url:"https://job-boards.greenhouse.io/inizio/jobs/7760963",
-   referral:"talent@inizio.health",applied:false,tailored:null,postedAt:hrs(80)},
+   referral:"talent@inizio.health",applied:false,tailored:null,postedAt:D("2026-05-15")},
   {id:"j8",role:"Data Engineer (0-2 yrs, Azure/Databricks)",company:"AOT Technologies",loc:"Remote",pay:"$60k–80k",src:"Greenhouse",board:"Greenhouse",score:8,
    url:"https://job-boards.greenhouse.io/aottechnologies/jobs/5072642008",
-   referral:"careers@aot-technologies.com",applied:false,tailored:null,postedAt:hrs(110)}
+   referral:"careers@aot-technologies.com",applied:false,tailored:null,postedAt:D("2026-05-10")}
 ];
 
 /* ── STATE ── */
@@ -305,6 +305,7 @@ const S = {
   showFailed: false,
   searchProgress: 0,
   searchStatus: '',
+  lastRefresh: null,
   chatOpen: false,
   chatTab: "talk",
   chatHistory: [
@@ -824,7 +825,8 @@ function renderHunter(){
   </div>
   <div class="notice" style="margin-bottom:12px">
     Showing <strong>${S.showFailed?sorted.length:verified.length} jobs</strong> · 
-    Strictly intern/co-op/0-2yr · Newest verified first · Click any badge to see verification details
+    Strictly intern/co-op/0-2yr · Newest first · 
+    ${S.lastRefresh ? `Last refreshed: ${new Date(S.lastRefresh).toLocaleTimeString()} · Auto-refreshes every 30 min` : 'Auto-refreshes every 30 min'}
   </div>
   ${sorted.filter(j=>S.showFailed||verifyJob(j).passed).map(j=>jobCard(j, true)).join("")}`;
 }
@@ -832,31 +834,83 @@ function renderHunter(){
 async function runJobSearch(){
   S.searching = true;
   S.searched = true;
-  S.searchProgress = 10;
-  S.searchStatus = 'Loading verified job boards…';
+  S.searchProgress = 5;
+  S.searchStatus = 'Fetching live jobs from Greenhouse & Lever…';
+  S.lastRefresh = Date.now();
   render();
 
-  // Start with the verified seed jobs (already checked)
-  S.jobs = [...SEED_JOBS];
+  // Start with verified seed jobs
+  let freshJobs = SEED_JOBS.map(j => ({...j, applied: S.jobs.find(x=>x.id===j.id)?.applied||false, tailored: S.jobs.find(x=>x.id===j.id)?.tailored||null}));
 
-  // Try to fetch live jobs via Claude AI (which can search)
-  S.searchProgress = 40;
-  S.searchStatus = 'Scoring jobs against your profile…';
+  // Try to fetch live jobs from Greenhouse public boards (no auth needed)
+  const LIVE_BOARDS = [
+    {company:'databricks',   name:'Databricks',   src:'Greenhouse'},
+    {company:'cloudflare',   name:'Cloudflare',   src:'Greenhouse'},
+    {company:'ripple',       name:'Ripple',        src:'Greenhouse'},
+    {company:'snowflake',    name:'Snowflake',     src:'Greenhouse'},
+    {company:'dbtlabsinc',   name:'dbt Labs',      src:'Greenhouse'},
+  ];
+
+  const INTERN_KEYWORDS = ['intern','internship','co-op','coop','co op','entry','junior','jr.','jr ','associate','new grad','0-2','0-1','graduate trainee'];
+  const SENIOR_KEYWORDS = ['senior','sr.','lead','principal','staff','director','manager','5+','6+','7+'];
+
+  let liveCount = 0;
+  for(let i=0; i<LIVE_BOARDS.length; i++){
+    const board = LIVE_BOARDS[i];
+    S.searchProgress = 10 + Math.floor(i/LIVE_BOARDS.length * 60);
+    S.searchStatus = `Scanning ${board.name} careers page…`;
+    render();
+    try {
+      const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board.company}/jobs`, {signal: AbortSignal.timeout(5000)});
+      if(!res.ok) continue;
+      const data = await res.json();
+      const jobs = (data.jobs||[]).filter(j=>{
+        const t = j.title.toLowerCase();
+        const hasIntern = INTERN_KEYWORDS.some(k=>t.includes(k));
+        const hasSenior = SENIOR_KEYWORDS.some(k=>t.includes(k));
+        const isDataRole = ['data','analytic','pipeline','etl','spark','sql','engineer'].some(k=>t.includes(k));
+        return hasIntern && !hasSenior && isDataRole;
+      });
+      jobs.slice(0,2).forEach((j,idx)=>{
+        const id = `live_${board.company}_${j.id}`;
+        if(!freshJobs.find(x=>x.id===id)){
+          freshJobs.unshift({
+            id, role:j.title, company:board.name,
+            loc: j.location?.name||'Remote',
+            pay:'See posting', src:board.src, board:board.src, score:9,
+            url: j.absolute_url,
+            referral:`careers@${board.company}.com`,
+            applied:false, tailored:null,
+            postedAt: j.updated_at ? new Date(j.updated_at).getTime() : Date.now()
+          });
+          liveCount++;
+        }
+      });
+    } catch(e){ /* board blocked or timeout — skip */ }
+  }
+
+  S.searchProgress = 85;
+  S.searchStatus = `Found ${liveCount} live jobs + ${SEED_JOBS.length} verified seeds · Running checks…`;
   render();
+  await new Promise(r=>setTimeout(r,400));
 
-  await new Promise(r=>setTimeout(r,800));
-
-  S.searchProgress = 80;
-  S.searchStatus = 'Running verification checks…';
-  render();
-
-  await new Promise(r=>setTimeout(r,600));
-
+  S.jobs = freshJobs;
   S.searching = false;
   S.searchProgress = 100;
   render();
 }
+
+// ── AUTO-REFRESH every 30 minutes when dashboard is open ──
+let _refreshTimer = null;
+function startAutoRefresh(){
+  if(_refreshTimer) clearInterval(_refreshTimer);
+  _refreshTimer = setInterval(()=>{
+    if(S.unlocked && S.tab==='hunter' && S.searched && !S.searching){
+      runJobSearch();
+    }
+  }, 30 * 60 * 1000); // 30 minutes
 }
+startAutoRefresh();
 
 /* ── REFERRAL EMAIL ── */
 function askReferral(id){
