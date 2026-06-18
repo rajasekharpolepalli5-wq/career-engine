@@ -260,15 +260,17 @@ Databases & Integration: PostgreSQL, MySQL, REST APIs, JSON, Pandas, NumPy, T-SQ
 Governance & Quality: Data Governance, Data Lineage, Data Quality, Data Security, Schema Validation`;
 
 /* ── SEED JOBS (real roles targeting entry-level/intern for RP's profile) ── */
+const NOW = Date.now();
+const hrs = h => NOW - h*3600000;
 const SEED_JOBS = [
-  {id:"j1",role:"Data Engineering Intern",company:"Microsoft",loc:"Remote",pay:"$35–45/hr",src:"LinkedIn",board:"Greenhouse",score:9,url:"https://careers.microsoft.com",applied:false,tailored:null},
-  {id:"j2",role:"Junior Data Engineer",company:"Databricks",loc:"Remote",pay:"$90k–110k",src:"Lever",board:"Lever",score:9,url:"https://databricks.com/company/careers",applied:false,tailored:null},
-  {id:"j3",role:"Data Engineer I",company:"Snowflake",loc:"Remote",pay:"$85k–105k",src:"Glassdoor",board:"Greenhouse",score:9,url:"https://careers.snowflake.com",applied:false,tailored:null},
-  {id:"j4",role:"Associate Data Engineer",company:"Accenture",loc:"Chicago, IL",pay:"$75k–95k",src:"Indeed",board:"Workday",score:8,url:"https://www.accenture.com/us-en/careers",applied:false,tailored:null},
-  {id:"j5",role:"Cloud Data Engineer (Entry)",company:"Deloitte",loc:"Milwaukee, WI",pay:"$80k–100k",src:"Dice",board:"Workday",score:8,url:"https://apply.deloitte.com",applied:false,tailored:null},
-  {id:"j6",role:"ETL Developer (Junior)",company:"Target",loc:"Minneapolis, MN",pay:"$72k–88k",src:"Wellfound",board:"Greenhouse",score:8,url:"https://corporate.target.com/careers",applied:false,tailored:null},
-  {id:"j7",role:"Data Platform Intern",company:"Ramp",loc:"Remote",pay:"$40/hr",src:"Lever",board:"Lever",score:9,url:"https://ramp.com/careers",applied:false,tailored:null},
-  {id:"j8",role:"Analytics Engineer (Entry)",company:"dbt Labs",loc:"Remote",pay:"$80k–95k",src:"Greenhouse",board:"Greenhouse",score:8,url:"https://www.getdbt.com/dbt-labs/open-roles",applied:false,tailored:null}
+  {id:"j1",role:"Data Engineering Intern",company:"Microsoft",loc:"Remote",pay:"$35–45/hr",src:"LinkedIn",board:"Greenhouse",score:9,url:"https://careers.microsoft.com",applied:false,tailored:null,postedAt:hrs(3)},
+  {id:"j7",role:"Data Platform Intern",company:"Ramp",loc:"Remote",pay:"$40/hr",src:"Lever",board:"Lever",score:9,url:"https://ramp.com/careers",applied:false,tailored:null,postedAt:hrs(11)},
+  {id:"j2",role:"Junior Data Engineer",company:"Databricks",loc:"Remote",pay:"$90k–110k",src:"Lever",board:"Lever",score:9,url:"https://databricks.com/company/careers",applied:false,tailored:null,postedAt:hrs(26)},
+  {id:"j3",role:"Data Engineer I",company:"Snowflake",loc:"Remote",pay:"$85k–105k",src:"Glassdoor",board:"Greenhouse",score:9,url:"https://careers.snowflake.com",applied:false,tailored:null,postedAt:hrs(49)},
+  {id:"j5",role:"Cloud Data Engineer (Entry)",company:"Deloitte",loc:"Milwaukee, WI",pay:"$80k–100k",src:"Dice",board:"Workday",score:8,url:"https://apply.deloitte.com",applied:false,tailored:null,postedAt:hrs(72)},
+  {id:"j4",role:"Associate Data Engineer",company:"Accenture",loc:"Chicago, IL",pay:"$75k–95k",src:"Indeed",board:"Workday",score:8,url:"https://www.accenture.com/us-en/careers",applied:false,tailored:null,postedAt:hrs(98)},
+  {id:"j8",role:"Analytics Engineer (Entry)",company:"dbt Labs",loc:"Remote",pay:"$80k–95k",src:"Greenhouse",board:"Greenhouse",score:8,url:"https://www.getdbt.com/dbt-labs/open-roles",applied:false,tailored:null,postedAt:hrs(130)},
+  {id:"j6",role:"ETL Developer (Junior)",company:"Target",loc:"Minneapolis, MN",pay:"$72k–88k",src:"Wellfound",board:"Greenhouse",score:8,url:"https://corporate.target.com/careers",applied:false,tailored:null,postedAt:hrs(168)}
 ];
 
 /* ── STATE ── */
@@ -645,6 +647,19 @@ function renderDashboard(){
 </div>`;
 }
 
+/* ── JOB AGE HELPER ── */
+function jobAge(postedAt){
+  if(!postedAt) return null;
+  const diff = Date.now() - postedAt;
+  const mins = Math.floor(diff/60000);
+  const hrs  = Math.floor(diff/3600000);
+  const days = Math.floor(diff/86400000);
+  if(mins < 60)  return {label:`${mins}m ago`, urgent:true};
+  if(hrs  < 24)  return {label:`${hrs}h ago`,  urgent:true};
+  if(days === 1) return {label:`1 day ago`,     urgent:false};
+  return           {label:`${days} days ago`,   urgent:false};
+}
+
 /* ── HUNTER ── */
 function renderHunter(){
   if(!S.searched) return `<div class="card"><div class="empty-state">
@@ -654,23 +669,32 @@ function renderHunter(){
   </div></div>`;
 
   const ready = S.jobs.filter(j=>j.score>=9).length;
+  const sorted = [...S.jobs].sort((a,b)=>(b.postedAt||0)-(a.postedAt||0));
   return `<div class="notice">
     <strong>${S.jobs.length} roles</strong> found across LinkedIn, Glassdoor, Greenhouse, Lever, Dice, Indeed, Wellfound ·
-    <strong>${ready}</strong> are 9/10+ matches for your profile · Targeting internships &amp; entry-level
+    <strong>${ready}</strong> are 9/10+ matches for your profile · Targeting internships &amp; entry-level · Sorted newest first
   </div>
   <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px">
     ${ME.targetBoards.map(b=>`<span class="pill pill-gray">${b}</span>`).join("")}
   </div>
-  ${S.jobs.map(j=>jobCard(j, true)).join("")}`;
+  ${sorted.map(j=>jobCard(j, true)).join("")}`;
 }
 
 /* ── JOB CARD ── */
 function jobCard(j, fromFeed){
   const col = j.score>=9?"var(--green)":j.score>=7?"var(--amber)":"var(--muted)";
-  return `<div class="jcard">
+  const age = jobAge(j.postedAt);
+  const ageBadge = age
+    ? `<span style="font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;margin-left:8px;
+        background:${age.urgent?'var(--gsoft)':'#f0eef8'};
+        color:${age.urgent?'var(--green)':'var(--muted)'}">
+        ${age.urgent?'🟢 ':''}${age.label}
+       </span>`
+    : '';
+  return `<div class="jcard" style="${age?.urgent?'border-color:#bfe8d2;':''}"">
     <div class="jhead">
       <div>
-        <div class="jtitle">${esc(j.role)}</div>
+        <div class="jtitle">${esc(j.role)} ${ageBadge}</div>
         <div class="jco">${esc(j.company)} · ${esc(j.loc)} · ${esc(j.pay)}</div>
       </div>
       <div class="jscore">
