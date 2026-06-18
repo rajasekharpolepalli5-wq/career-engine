@@ -277,7 +277,7 @@ const S = {
   tab: "hunter",
   unlocked: false,
   gateOpen: false,
-  magicSent: false,
+  gateStep: "email",
   jobs: [...SEED_JOBS],
   apps: [],
   searched: false,
@@ -474,41 +474,109 @@ function initPortfolio(){
 }
 
 /* ══════════════════════════════════════════
-   GATE
+   GATE — Real OTP via EmailJS
 ══════════════════════════════════════════ */
-function ownerAccess(){ S.gateOpen=true; S.magicSent=false; render(); }
-function openGate(){ S.gateOpen=true; S.magicSent=false; }
-function closeGate(){ S.gateOpen=false; if(!S.unlocked) S.view="portfolio"; render(); }
-const OWNER_EMAIL = "rajasekhar.polepalli5@gmail.com";
-function sendMagic(){
-  const v = (document.getElementById("gate-email")?.value||"").trim().toLowerCase();
-  if(!v||!v.includes("@")){
-    document.getElementById("gate-err").textContent = "Enter a valid email.";
+
+// ── EmailJS config (fill these in after setting up EmailJS) ──
+const EJS_SERVICE  = "service_1cpvdx6";
+const EJS_TEMPLATE = "template_vkeehf7";
+const EJS_PUBKEY   = "Csky0rwWSHLRZG4nW";
+
+const OWNER_EMAILS = ["rajasekhar.polepalli5@gmail.com","rajasekharpolepalli5@gmail.com"];
+
+// OTP state
+let _otp = null;
+let _otpExpiry = 0;
+let _otpEmail = "";
+
+function ownerAccess(){ S.gateOpen=true; S.gateStep="email"; render(); }
+function openGate(){ S.gateOpen=true; S.gateStep="email"; }
+function closeGate(){ S.gateOpen=false; _otp=null; if(!S.unlocked) S.view="portfolio"; render(); }
+
+function _genOTP(){ return String(Math.floor(100000+Math.random()*900000)); }
+
+async function sendOTP(){
+  const inp = document.getElementById("gate-email");
+  const err = document.getElementById("gate-err");
+  const btn = document.getElementById("gate-send-btn");
+  const v = (inp?.value||"").trim().toLowerCase();
+
+  if(!v||!v.includes("@")){ err.textContent="Enter a valid email."; return; }
+  if(!OWNER_EMAILS.map(e=>e.toLowerCase()).includes(v)){
+    err.textContent="Access denied — this dashboard is private.";
     return;
   }
-  if(v !== OWNER_EMAIL.toLowerCase()){
-    document.getElementById("gate-err").textContent = "Access denied — this dashboard is private.";
-    return;
+
+  btn.disabled=true; btn.textContent="Sending…";
+  err.textContent="";
+
+  _otp = _genOTP();
+  _otpExpiry = Date.now() + 10*60*1000; // 10 min expiry
+  _otpEmail = v;
+
+  try {
+    // Load EmailJS SDK if not already loaded
+    if(!window.emailjs){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+      emailjs.init(EJS_PUBKEY);
+    }
+    await emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
+      email: _otpEmail,
+      otp_code: _otp,
+      expiry: "10 minutes"
+    });
+    S.gateStep="otp"; render();
+  } catch(e){
+    _otp=null;
+    btn.disabled=false; btn.textContent="Send OTP";
+    err.textContent="Failed to send OTP — check EmailJS config.";
   }
-  S.magicSent = true; render();
 }
-function demoUnlock(){ S.unlocked=true; S.gateOpen=false; S.view="dashboard"; render(); }
+
+function verifyOTP(){
+  const inp = document.getElementById("gate-otp");
+  const err = document.getElementById("otp-err");
+  const v = (inp?.value||"").trim();
+
+  if(!v||v.length!==6){ err.textContent="Enter the 6-digit code."; return; }
+  if(Date.now() > _otpExpiry){ err.textContent="OTP expired. Request a new one."; _otp=null; S.gateStep="email"; render(); return; }
+  if(v !== _otp){ err.textContent="Incorrect code. Try again."; inp.value=""; return; }
+
+  // ✅ correct
+  _otp=null; _otpEmail="";
+  S.unlocked=true; S.gateOpen=false; S.view="dashboard"; render();
+}
+
+function resendOTP(){ S.gateStep="email"; _otp=null; render(); }
+
 function renderGate(){
+  const step = S.gateStep || "email";
   return `<div class="overlay" onclick="if(event.target===this)closeGate()">
   <div class="gate-box">
     <button class="close-x" onclick="closeGate()">×</button>
     <div class="gate-icon">⚷</div>
-    ${S.magicSent ? `
-      <h3>Check your inbox</h3>
-      <p>A secure one-time link was sent to your email. Only your address can open the dashboard.</p>
-      <button class="btn" style="width:100%" onclick="demoUnlock()">Open the link (demo)</button>
-      <div class="gate-sent">In production this opens from your email — recruiters never reach this.</div>
+    ${step === "otp" ? `
+      <h3>Enter your OTP</h3>
+      <p>A 6-digit code was sent to<br><strong style="color:#06d6a0">${_otpEmail}</strong><br>It expires in 10 minutes.</p>
+      <input id="gate-otp" type="text" maxlength="6" placeholder="000000"
+        style="text-align:center;font-size:26px;letter-spacing:10px;font-weight:700"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+        onkeydown="if(event.key==='Enter')verifyOTP()">
+      <div id="otp-err" style="font-size:12.5px;color:#f87171;margin:4px 0 8px;min-height:18px"></div>
+      <button class="btn" style="width:100%;margin-bottom:10px" onclick="verifyOTP()">Verify & open dashboard</button>
+      <button onclick="resendOTP()" style="background:none;border:0;color:rgba(255,255,255,.4);font-size:13px;cursor:pointer;width:100%">Resend code</button>
     ` : `
       <h3>Owner access</h3>
-      <p>This dashboard is private. Enter your email to receive a one-time magic link.</p>
-      <input id="gate-email" type="text" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendMagic()">
-      <div id="gate-err" style="font-size:12.5px;color:#f87171;margin:-4px 0 8px;min-height:18px"></div>
-      <button class="btn" style="width:100%" onclick="sendMagic()">Send magic link</button>
+      <p>This dashboard is private. Enter your email to receive a one-time passcode.</p>
+      <input id="gate-email" type="text" placeholder="your@email.com"
+        onkeydown="if(event.key==='Enter')sendOTP()">
+      <div id="gate-err" style="font-size:12.5px;color:#f87171;margin:4px 0 8px;min-height:18px"></div>
+      <button class="btn" id="gate-send-btn" style="width:100%" onclick="sendOTP()">Send OTP</button>
     `}
   </div></div>`;
 }
