@@ -826,7 +826,7 @@ function renderHunter(){
 
 
 
-/* ── LIVE LINK VERIFIER (uses Greenhouse/Lever APIs — no false positives) ── */
+/* ── LIVE LINK VERIFIER — also fetches JD content for profile matching ── */
 async function verifyLink(url){
   if(!url || !url.startsWith('http')) return {live:false, reason:'No URL'};
   
@@ -837,13 +837,16 @@ async function verifyLink(url){
       if(match) {
         const [, board, jobId] = match;
         const apiRes = await fetch(
-          `https://boards-api.greenhouse.io/v1/boards/${board}/jobs/${jobId}`,
+          `https://boards-api.greenhouse.io/v1/boards/${board}/jobs/${jobId}?questions=true`,
           {signal: AbortSignal.timeout(5000)}
         );
         if(!apiRes.ok) return {live:false, reason:`Closed (${apiRes.status})`};
         const data = await apiRes.json();
         if(!data.title) return {live:false, reason:'No job title — removed'};
-        return {live:true, reason:'OK', title:data.title};
+        // Strip HTML from description
+        const rawDesc = data.content || '';
+        const description = rawDesc.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+        return {live:true, reason:'OK', title:data.title, description};
       }
     }
     
@@ -857,7 +860,13 @@ async function verifyLink(url){
           {signal: AbortSignal.timeout(5000)}
         );
         if(!apiRes.ok) return {live:false, reason:`Lever 404`};
-        return {live:true, reason:'OK'};
+        const data = await apiRes.json();
+        const description = [
+          data.descriptionPlain||'',
+          (data.lists||[]).map(l=>l.content||'').join(' '),
+          data.additionalPlain||''
+        ].join(' ').replace(/\s+/g,' ').trim();
+        return {live:true, reason:'OK', title:data.text, description};
       }
     }
     
@@ -1027,9 +1036,9 @@ async function runJobSearch(){
     } catch(e){}
   }
 
-  // ── STEP 2: Verify every link automatically ──
+  // ── STEP 2: Verify every link — also fetches full JD for profile matching ──
   S.searchProgress = 45;
-  S.searchStatus = `Verifying ${freshJobs.length} job links — removing dead ones…`;
+  S.searchStatus = `Fetching ${freshJobs.length} job descriptions for skill matching…`;
   render();
 
   const verifyBatch = async (jobs) => {
@@ -1038,18 +1047,25 @@ async function runJobSearch(){
         const check = await verifyLink(j.url);
         j.linkStatus = check.live;
         j.linkReason = check.reason;
+        // Attach real JD text — used for accurate profile match scoring
+        if(check.description) {
+          j.description = check.description;
+          // Recompute profile match with full JD text
+          j._match = profileMatch(j.role, j.description);
+          // Update score from match if better
+          if(j._match.score > (j.score||0)) j.score = j._match.score;
+        }
         return j;
       })
     );
     return results.map(r => r.status==='fulfilled'?r.value:null).filter(Boolean);
   };
 
-  // Verify in batches of 4 to avoid overwhelming the browser
   for(let i=0; i<freshJobs.length; i+=4){
     const batch = freshJobs.slice(i, i+4);
     await verifyBatch(batch);
     S.searchProgress = 45 + Math.floor((i/freshJobs.length)*40);
-    S.searchStatus = `Verified ${Math.min(i+4, freshJobs.length)}/${freshJobs.length} links…`;
+    S.searchStatus = `Fetched JD + verified ${Math.min(i+4, freshJobs.length)}/${freshJobs.length}…`;
     render();
   }
 
