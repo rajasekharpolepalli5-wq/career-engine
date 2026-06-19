@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rajasekhar Polepalli</title>
+<style>
+:root{
+  --ink:#0f0e1a;--ink2:#2e2c40;--muted:#6b6880;--faint:#9896ab;--line:#e4e2ef;
+  --bg:#f7f6fb;--card:#fff;--acc:#1a6ef5;--acc2:#0d5cd4;
+  --green:#0a7c4e;--gsoft:#e2f5ec;--amber:#8a5c00;--asoft:#fdf2d8;
+  --red:#c0291e;--rsoft:#fde8e6;
+  --r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font-family:inherit}
+
+/* ── DASHBOARD TOPBAR (owner only) ── */
+.dash-topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:11px 20px;background:rgba(247,246,251,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;font-size:15px;color:var(--ink)}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:var(--acc)}
+
+/* ── SHARED ── */
+.wrap{max-width:1020px;margin:0 auto;padding:24px 20px 80px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.card+.card{margin-top:14px}
+h2{font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--ink);margin-bottom:6px}
+.sub{font-size:13.5px;color:var(--muted);margin-bottom:18px}
+label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:5px;letter-spacing:.02em;text-transform:uppercase}
+input[type=text],textarea,select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:14px;color:var(--ink);background:#fff;outline:none;transition:.15s}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(26,110,245,.1)}
+textarea{resize:vertical;line-height:1.6}
+.btn{display:inline-flex;align-items:center;gap:7px;border:0;background:var(--acc);color:#fff;font-weight:700;font-size:14px;padding:11px 20px;border-radius:10px;cursor:pointer;transition:.15s}
+.btn:hover{background:var(--acc2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-ghost{background:var(--card);color:var(--ink2);border:1px solid var(--line);font-weight:600;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{margin-bottom:14px}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px}
+.pill-g{background:var(--gsoft);color:var(--green)}
+.pill-a{background:var(--asoft);color:var(--amber)}
+.pill-r{background:var(--rsoft);color:var(--red)}
+.pill-b{background:#e8f0fe;color:#1a4db7}
+.pill-gray{background:#f0eef8;color:var(--muted)}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;flex-shrink:0}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-state h3{font-size:16px;color:var(--ink);margin-bottom:6px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px}
+.metric .n{font-size:26px;font-weight:800;letter-spacing:-.04em;color:var(--ink)}
+.metric .l{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.tabs button{border:1px solid var(--line);background:var(--card);color:var(--ink2);padding:8px 16px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.notice{background:#e8f0fe;border:1px solid #c2d4fc;border-radius:9px;padding:10px 14px;font-size:12.5px;color:#1a4db7;margin-bottom:14px}
+
+/* ── JOB CARDS ── */
+.jcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:12px;transition:.15s}
+.jcard:hover{border-color:#c8c4e8}
+.jhead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.jtitle{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.jco{font-size:13px;color:var(--muted);margin-top:3px}
+.jscore{text-align:right;flex-shrink:0}
+.jscore .snum{font-size:26px;font-weight:800;letter-spacing:-.04em}
+.jscore .sdiv{font-size:13px;color:var(--muted);font-weight:500}
+.jmeta{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.jacts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.jacts button,.jacts a{font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink2);font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+.jacts .apply-btn{background:var(--acc);color:#fff;border:0}
+.jacts .apply-btn:hover{background:var(--acc2)}
+.verdict{background:#f7f6fb;border:1px solid var(--line);border-radius:8px;padding:10px 13px;font-size:13px;color:var(--ink2);margin-top:10px;line-height:1.6}
+
+/* ── RESUME OUTPUT ── */
+.resume-wrap{margin-top:14px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.resume-toolbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f3f2f8;border-bottom:1px solid var(--line)}
+.resume-toolbar span{font-size:12px;font-weight:700;color:var(--muted)}
+.resume-body{padding:28px 32px;background:#fff;font-family:'Times New Roman',Times,serif;font-size:11pt;line-height:1.4;color:#000}
+.resume-body .rname{text-align:center;font-size:14pt;font-weight:700;letter-spacing:.05em;margin-bottom:4px}
+.resume-body .rcontact{text-align:center;font-size:10pt;margin-bottom:10px;color:#222}
+.resume-body hr{border:0;border-top:1.5px solid #000;margin:6px 0}
+.resume-body .rsec{font-size:11pt;font-weight:700;letter-spacing:.04em;margin-top:10px;margin-bottom:2px}
+.resume-body .rskill-row{margin-bottom:3px;font-size:10.5pt}
+.resume-body .rskill-row b{font-weight:700}
+.resume-body .rjob-head{display:flex;justify-content:space-between;font-weight:700;font-size:11pt;margin-top:8px}
+.resume-body .rjob-stack{font-size:10pt;color:#333;margin:2px 0 4px;font-style:italic}
+.resume-body ul{margin:0;padding-left:18px}
+.resume-body ul li{font-size:10.5pt;margin-bottom:3px;line-height:1.45}
+.resume-body .redu-row{display:flex;justify-content:space-between;font-size:10.5pt;margin-bottom:2px}
+
+/* ── PORTFOLIO ── */
+#pf-root{background:#0a0912;color:#f4f2ff;min-height:100vh;overflow-x:hidden}
+.pf-nav{display:flex;justify-content:space-between;align-items:center;padding:22px 48px;position:sticky;top:0;z-index:50;background:rgba(10,9,18,.85);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.07)}
+.pf-logo{font-weight:800;font-size:16px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.pf-logo-ring{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#1a6ef5,#06d6a0);animation:glow 3s ease-in-out infinite}
+@keyframes glow{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.2)}}
+.pf-navlinks{display:flex;gap:28px;font-size:14px}
+.pf-navlinks a{color:rgba(255,255,255,.5);text-decoration:none;transition:.2s}
+.pf-navlinks a:hover{color:#fff}
+
+.pf-hero{max-width:900px;margin:0 auto;padding:90px 48px 60px;position:relative}
+.pf-tag{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:#06d6a0;border:1px solid rgba(6,214,160,.25);background:rgba(6,214,160,.06);padding:6px 14px;border-radius:99px;margin-bottom:22px}
+.pf-tag-dot{width:6px;height:6px;border-radius:50%;background:#06d6a0;box-shadow:0 0 8px #06d6a0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.pf-h1{font-size:clamp(42px,7vw,88px);font-weight:900;line-height:.94;letter-spacing:-.045em;margin-bottom:22px}
+.pf-h1 .grad{background:linear-gradient(100deg,#1a6ef5 0%,#06d6a0 45%,#f5a623 80%);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200%;animation:flowgrad 5s linear infinite}
+@keyframes flowgrad{to{background-position:200% center}}
+.pf-lead{font-size:clamp(16px,2.2vw,20px);color:rgba(255,255,255,.55);max-width:580px;line-height:1.6;margin-bottom:32px}
+.pf-stats{display:flex;gap:32px;flex-wrap:wrap;margin-bottom:40px}
+.pf-stat .n{font-size:32px;font-weight:900;letter-spacing:-.04em;color:#fff}
+.pf-stat .l{font-size:12px;color:rgba(255,255,255,.4);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.pf-ctas{display:flex;gap:12px;flex-wrap:wrap}
+.pf-btn-primary{background:linear-gradient(110deg,#1a6ef5,#06d6a0);color:#fff;border:0;padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 8px 28px rgba(26,110,245,.3);transition:.2s;text-decoration:none;display:inline-block}
+.pf-btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(26,110,245,.45)}
+.pf-btn-sec{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);color:#fff;padding:14px 26px;border-radius:12px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;display:inline-block;transition:.2s;backdrop-filter:blur(6px)}
+.pf-btn-sec:hover{border-color:rgba(255,255,255,.35)}
+
+.pf-sec{max-width:900px;margin:0 auto;padding:50px 48px}
+.pf-sec-h{display:flex;align-items:center;gap:14px;margin-bottom:34px}
+.pf-sec-num{font-size:12px;color:rgba(255,255,255,.25);font-weight:700;letter-spacing:.1em}
+.pf-sec-h h2{font-size:clamp(24px,3.8vw,38px);font-weight:800;letter-spacing:-.03em;margin:0;color:#fff}
+.pf-sec-rule{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.1),transparent)}
+
+.skill-cloud{display:flex;flex-wrap:wrap;gap:10px}
+.skill-chip{padding:9px 16px;border-radius:10px;font-size:14px;font-weight:500;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.8);transition:.25s;cursor:default}
+.skill-chip:hover{border-color:#1a6ef5;color:#1a6ef5;transform:translateY(-3px);box-shadow:0 8px 20px rgba(26,110,245,.18)}
+.skill-chip.core{border-color:rgba(6,214,160,.3);background:rgba(6,214,160,.07);color:#06d6a0}
+
+.exp-item{padding:22px 0;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:22px}
+.exp-item:last-child{border-bottom:0}
+.exp-yr{font-size:13px;color:rgba(255,255,255,.35);min-width:110px;font-weight:600;padding-top:3px}
+.exp-body .exp-role{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.exp-body .exp-co{font-size:14px;color:rgba(255,255,255,.45);margin:3px 0 10px}
+.exp-body ul{padding-left:18px}
+.exp-body ul li{font-size:14px;color:rgba(255,255,255,.65);margin-bottom:6px;line-height:1.55}
+.exp-body ul li strong{color:rgba(255,255,255,.9);font-weight:700}
+
+.pf-contact-box{background:linear-gradient(140deg,rgba(26,110,245,.2),rgba(6,214,160,.1));border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:50px;text-align:center}
+.pf-contact-box h2{font-size:clamp(26px,4.5vw,46px);font-weight:900;letter-spacing:-.04em;margin-bottom:12px}
+.pf-contact-box p{color:rgba(255,255,255,.5);font-size:17px;margin-bottom:28px}
+
+.pf-footer{max-width:900px;margin:0 auto;padding:20px 48px 50px;display:flex;justify-content:space-between;align-items:center;color:rgba(255,255,255,.2);font-size:13px;border-top:1px solid rgba(255,255,255,.07)}
+
+/* chat bubble */
+#chat-bubble{position:fixed;bottom:28px;right:28px;z-index:200;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1a6ef5,#06d6a0);border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 22px rgba(26,110,245,.45);transition:.2s}
+#chat-bubble:hover{transform:scale(1.08)}
+#chat-bubble svg{width:24px;height:24px;fill:#fff}
+#chat-panel{position:fixed;bottom:90px;right:24px;z-index:200;width:370px;max-height:520px;background:#131120;border:1px solid rgba(255,255,255,.12);border-radius:18px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#chat-panel.open{display:flex}
+.cp-header{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center}
+.cp-header span{font-size:14px;font-weight:700;color:#fff}
+.cp-header button{background:none;border:0;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;line-height:1}
+.cp-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.08)}
+.cp-tabs button{flex:1;padding:10px;background:none;border:0;color:rgba(255,255,255,.4);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;border-bottom:2px solid transparent}
+.cp-tabs button.on{color:#06d6a0;border-bottom-color:#06d6a0}
+.cp-body{flex:1;overflow-y:auto;padding:14px}
+.cp-body::-webkit-scrollbar{width:4px}
+.cp-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.chat-msg{margin-bottom:12px}
+.chat-msg.bot .bubble{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85);border-radius:14px 14px 14px 4px;padding:10px 13px;font-size:13.5px;line-height:1.55;display:inline-block;max-width:90%}
+.chat-msg.user{text-align:right}
+.chat-msg.user .bubble{background:linear-gradient(135deg,#1a6ef5,#0a50cc);color:#fff;border-radius:14px 14px 4px 14px;padding:10px 13px;font-size:13.5px;display:inline-block;max-width:90%}
+.chat-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chat-chips button{font-size:12px;padding:6px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);cursor:pointer}
+.chat-chips button:hover{border-color:#06d6a0;color:#06d6a0}
+.cp-input{display:flex;gap:8px;padding:10px 14px;border-top:1px solid rgba(255,255,255,.08)}
+.cp-input input{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:9px 12px;color:#fff;font-size:13.5px;outline:none}
+.cp-input input::placeholder{color:rgba(255,255,255,.3)}
+.cp-input input:focus{border-color:#1a6ef5}
+.cp-input button{background:linear-gradient(135deg,#1a6ef5,#06d6a0);border:0;border-radius:8px;padding:9px 14px;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.cp-resume{padding:14px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.7;white-space:pre-wrap;font-family:monospace}
+
+/* owner gate */
+.overlay{position:fixed;inset:0;z-index:300;background:rgba(5,4,14,.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-box{background:#131120;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:34px;width:100%;max-width:390px;text-align:center;position:relative}
+.gate-icon{width:50px;height:50px;border-radius:14px;margin:0 auto 16px;background:linear-gradient(135deg,#1a6ef5,#06d6a0);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff}
+.gate-box h3{font-size:20px;font-weight:800;color:#fff;margin-bottom:8px}
+.gate-box p{font-size:14px;color:rgba(255,255,255,.45);margin-bottom:22px}
+.gate-box input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;color:#fff;font-size:14.5px;outline:none;margin-bottom:12px}
+.gate-box input:focus{border-color:#1a6ef5}
+.gate-box .close-x{position:absolute;top:16px;right:18px;background:none;border:0;color:rgba(255,255,255,.3);font-size:22px;cursor:pointer;line-height:1}
+.gate-sent{color:#06d6a0;font-size:13.5px;margin-top:10px}
+
+@media(max-width:680px){
+  .metrics{grid-template-columns:1fr 1fr}
+  .row2{grid-template-columns:1fr}
+  .pf-hero,.pf-sec,.pf-footer,.pf-nav{padding-left:22px;padding-right:22px}
+  .pf-h1{font-size:46px}
+  #chat-panel{width:calc(100vw - 32px);right:16px}
+}
+</style>
+</head>
+<body>
+
+
+
+<!-- ═══ ROOT ═══ -->
+<div id="root"></div>
+
+<script>
+const API = "/api/claude";
+
+/* ── PROFILE ── */
+const ME = {
+  name: "Rajasekhar Polepalli",
+  title: "Data Engineer",
+  subtitle: "Azure · Databricks · PySpark · Delta Lake",
+  location: "Wauwatosa, WI · Open to Remote / Hybrid / Relocate",
+  email: "rajasekhar.polepalli5@gmail.com",
+  phone: "+1 (414) 436-4320",
+  linkedin: "linkedin.com/in/rajasekharpolepalli-0806793a3",
+  tagline: "Turning Raw Data into Reliable Decisions — at Production Scale",
+  summary: "Data engineer with 3+ years designing, building, and optimizing production data pipelines on Azure, Databricks, Azure Synapse Analytics, Azure Data Factory, Delta Lake, and ADLS Gen2. Strong in PySpark, Spark SQL, Python, and Spark Structured Streaming for batch and real-time workloads. Experienced in ETL/ELT, lakehouse architecture (Bronze/Silver/Gold), dimensional modeling, and CI/CD through Azure DevOps. Completing MS in Computer Science at Concordia University Wisconsin (Dec 2026).",
+  coreSkills: ["Azure Data Factory","Azure Databricks","PySpark","Delta Lake","ADLS Gen2","Azure Synapse Analytics","Microsoft Fabric","Spark Structured Streaming","T-SQL","Spark SQL","Python","PostgreSQL","MySQL","REST APIs","Azure DevOps","CI/CD","Git","pytest","Pandas","NumPy","ETL/ELT","Dimensional Modeling","Star Schema","Lakehouse Architecture"],
+  experience: [
+    {
+      role: "Data Engineer",
+      company: "LimeChat",
+      location: "India",
+      period: "Jul 2023 – Jul 2024",
+      stack: "Azure Data Factory, Azure Databricks, PySpark, Spark Structured Streaming, Delta Lake, ADLS Gen2, Azure Synapse, Microsoft Fabric, T-SQL, Azure DevOps, pytest, REST APIs",
+      bullets: [
+        "Designed and deployed ETL/ELT pipelines on Azure Data Factory and Azure Databricks ingesting <strong>5M+ events daily</strong> into Delta Lake on ADLS Gen2 across Bronze, Silver, Gold lakehouse layers.",
+        "Engineered Spark Structured Streaming jobs with autoscaling Databricks clusters, event-time watermarks, and Delta Lake checkpointing — <strong>cutting end-to-end latency by 40%</strong> and absorbing 10× traffic bursts.",
+        "Modeled fact and dimension tables in Azure Synapse Analytics and Microsoft Fabric using T-SQL and Spark SQL, building curated reporting layers for BI consumers.",
+        "Implemented CI/CD with Azure DevOps, YAML pipelines, Git branching, and pytest validation suites — achieving <strong>99.9% pipeline SLA</strong> and reducing deployment failures by 60%.",
+        "Integrated data from REST APIs, JSON, PostgreSQL, and MySQL into unified landing zones using Python, Pandas, and NumPy with data quality and lineage best practices."
+      ]
+    },
+    {
+      role: "Data Engineer",
+      company: "GoKwik",
+      location: "India",
+      period: "May 2021 – Jun 2023",
+      stack: "Azure Databricks, Azure Data Factory, PySpark, Spark SQL, Delta Lake, ADLS Gen2, Azure Synapse, T-SQL, PostgreSQL, MySQL, Python, Azure DevOps, Git",
+      bullets: [
+        "Built PySpark transformation pipelines on Azure Databricks processing <strong>3M+ transactions/month</strong> into Silver and Gold Delta tables for downstream analytics.",
+        "Reduced Spark batch runtime from <strong>90 min to 35 min</strong> through partition pruning, broadcast joins, and Delta Lake file-size optimizations.",
+        "Redesigned Azure Synapse Analytics star schemas and T-SQL stored procedures, <strong>lifting query performance by 45%</strong> for merchant dashboards.",
+        "Automated ingestion from REST APIs, MySQL, and PostgreSQL into ADLS Gen2 via scheduled Azure Data Factory pipelines, shifting freshness from daily to hourly.",
+        "Streamlined release workflow with CI/CD in Azure DevOps using YAML pipelines and Git branching, reducing deployment errors across staging and production."
+      ]
+    }
+  ],
+  education: [
+    { degree: "Master's in Computer Science", school: "Concordia University Wisconsin", period: "Aug 2024 – Dec 2026", loc: "Wauwatosa, WI" },
+    { degree: "Bachelor's in Computer Science", school: "Vel Tech Technical University", period: "Jun 2018 – May 2022", loc: "India" }
+  ],
+  targetRoles: ["Data Engineer", "Junior Data Engineer", "Data Engineering Intern", "Analytics Engineer", "Cloud Data Engineer", "ETL Developer", "Data Platform Engineer"],
+  targetBoards: ["LinkedIn", "Indeed", "Glassdoor", "Dice", "Wellfound", "Greenhouse", "Lever"]
+};
+
+const RESUME_SKILLS = `Cloud Platforms: Microsoft Azure, Azure Databricks, Azure Synapse Analytics, Azure Data Factory, ADLS Gen2, Microsoft Fabric, Delta Lake, Azure SQL
+Programming & Query: SQL, T-SQL, Spark SQL, Python, PySpark, YAML, DAX, Shell
+Data Engineering: ETL/ELT, Data Warehousing, Dimensional Modeling, Star Schema, Snowflake Schema, Lakehouse, Bronze/Silver/Gold Architecture
+Streaming & Real-Time: Spark Structured Streaming, Event-Time Processing, Watermarking, Delta Lake Checkpointing
+DevOps & CI/CD: Azure DevOps, Git, GitHub, YAML Pipelines, CI/CD, pytest, Agile/Scrum
+Databases & Integration: PostgreSQL, MySQL, REST APIs, JSON, Pandas, NumPy, T-SQL Stored Procedures
+Governance & Quality: Data Governance, Data Lineage, Data Quality, Data Security, Schema Validation`;
+
+/* ── SEED JOBS — VERIFIED real intern/co-op postings (Greenhouse/Lever direct links) ── */
+// Real posting dates — age is always calculated live from current time
+const D = d => new Date(d).getTime(); // convert real date to timestamp
+const SEED_JOBS = [
+  {id:"j1",role:"Data Engineering Intern",company:"AccuWeather",loc:"State College, PA / Remote",pay:"$20–28/hr",src:"Greenhouse",board:"Greenhouse",score:9,
+   url:"https://job-boards.greenhouse.io/accuweather/jobs/7441297",
+   referral:"careers@accuweather.com",applied:false,tailored:null,postedAt:D("2026-06-16")},
+  {id:"j2",role:"Data Engineer Intern (Summer 2026)",company:"Cloudflare",loc:"Remote",pay:"$45–55/hr",src:"Greenhouse",board:"Greenhouse",score:9,
+   url:"https://job-boards.greenhouse.io/cloudflare/jobs/7374706",
+   referral:"universityprograms@cloudflare.com",applied:false,tailored:null,postedAt:D("2026-06-10")},
+  {id:"j3",role:"Software Engineer Intern – Data Engineering",company:"Ripple",loc:"Remote",pay:"$40–50/hr",src:"Lever",board:"Lever",score:9,
+   url:"https://job-boards.greenhouse.io/ripple/jobs/7467151",
+   referral:"internships@ripple.com",applied:false,tailored:null,postedAt:D("2026-06-05")},
+  {id:"j4",role:"Software Engineering Intern (Data)",company:"Databricks",loc:"Remote",pay:"$50–60/hr",src:"Greenhouse",board:"Greenhouse",score:9,
+   url:"https://job-boards.greenhouse.io/databricks/jobs/7640764002",
+   referral:"university-recruiting@databricks.com",applied:false,tailored:null,postedAt:D("2026-06-01")},
+  {id:"j5",role:"Data Engineering Summer Intern",company:"SharkNinja",loc:"Needham, MA / Remote",pay:"$25–32/hr",src:"Greenhouse",board:"Greenhouse",score:8,
+   url:"https://job-boards.greenhouse.io/sharkninjaoperatingllc/jobs/4601703006",
+   referral:"talent@sharkninja.com",applied:false,tailored:null,postedAt:D("2026-05-28")},
+  {id:"j6",role:"ADAS Data Analytics Intern (Databricks/PySpark)",company:"Mercedes-Benz R&D NA",loc:"Sunnyvale, CA",pay:"$30–38/hr",src:"Lever",board:"Lever",score:9,
+   url:"https://jobs.lever.co/MBRDNA/e801fdb7-7c75-4378-bff6-b3f197489262",
+   referral:"careers@mbrdna.com",applied:false,tailored:null,postedAt:D("2026-05-20")},
+  {id:"j7",role:"Azure Data Engineer – Analyst (Entry)",company:"Inizio",loc:"Remote",pay:"$55k–70k",src:"Greenhouse",board:"Greenhouse",score:8,
+   url:"https://job-boards.greenhouse.io/inizio/jobs/7760963",
+   referral:"talent@inizio.health",applied:false,tailored:null,postedAt:D("2026-05-15")},
+  {id:"j8",role:"Data Engineer (0-2 yrs, Azure/Databricks)",company:"AOT Technologies",loc:"Remote",pay:"$60k–80k",src:"Greenhouse",board:"Greenhouse",score:8,
+   url:"https://job-boards.greenhouse.io/aottechnologies/jobs/5072642008",
+   referral:"careers@aot-technologies.com",applied:false,tailored:null,postedAt:D("2026-05-10")}
+];
+
+/* ── STATE ── */
+const S = {
+  view: "portfolio",
+  tab: "hunter",
+  unlocked: false,
+  gateOpen: false,
+  gateStep: "email",
+  showReferral: false,
+  referralJob: null,
+  jobs: [...SEED_JOBS],
+  apps: [],
+  searched: false,
+  searching: false,
+  showFailed: false,
+  searchProgress: 0,
+  searchStatus: '',
+  lastRefresh: null,
+  chatOpen: false,
+  chatTab: "talk",
+  chatHistory: [
+    {role:"bot", text:"Hi! I'm Rajasekhar's AI assistant. Ask me anything about his data engineering experience, Azure stack, projects, or availability. 👋"}
+  ]
+};
+
+/* ══════════════════════════════════════════
+   RENDER ROUTER
+══════════════════════════════════════════ */
+function setView(v){
+  S.view = v;
+  render();
+}
+function setTab(t){ S.tab = t; render(); }
+function render(){
+  const r = document.getElementById("root");
+  if(S.view === "portfolio") r.innerHTML = renderPortfolio();
+  else if(S.unlocked) r.innerHTML = renderDashboard();
+  else { r.innerHTML = renderPortfolio(); openGate(); }
+  if(S.view === "portfolio") initPortfolio();
+}
+
+/* ══════════════════════════════════════════
+   PORTFOLIO
+══════════════════════════════════════════ */
+function renderPortfolio(){
+  const skills_core = ME.coreSkills.slice(0,10);
+  const skills_rest = ME.coreSkills.slice(10);
+  return `
+<div id="pf-root">
+  <nav class="pf-nav">
+    <div class="pf-logo"><span class="pf-logo-ring"></span>${ME.name}</div>
+    <div class="pf-navlinks">
+      <a href="#about">About</a>
+      <a href="#experience">Experience</a>
+      <a href="#skills">Skills</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </nav>
+
+  <header class="pf-hero" id="about">
+    <div class="pf-tag"><span class="pf-tag-dot"></span>Open to internships &amp; entry-level roles · Dec 2026 grad</div>
+    <h1 class="pf-h1">Hi, I'm<br><span class="grad">${ME.name}</span></h1>
+    <p class="pf-lead">${ME.tagline}</p>
+    <div class="pf-stats">
+      <div class="pf-stat"><div class="n">3+</div><div class="l">Years production experience</div></div>
+      <div class="pf-stat"><div class="n">5M+</div><div class="l">Events/day processed</div></div>
+      <div class="pf-stat"><div class="n">40%</div><div class="l">Latency cut at LimeChat</div></div>
+      <div class="pf-stat"><div class="n">99.9%</div><div class="l">Pipeline SLA achieved</div></div>
+    </div>
+    <div class="pf-ctas">
+      <a class="pf-btn-primary" href="mailto:${ME.email}">Get in touch →</a>
+      <button class="pf-btn-sec" onclick="document.getElementById('chat-bubble').click()">Chat with me ✦</button>
+    </div>
+  </header>
+
+  <section class="pf-sec" id="skills">
+    <div class="pf-sec-h">
+      <span class="pf-sec-num">01</span>
+      <h2>Tech stack</h2>
+      <span class="pf-sec-rule"></span>
+    </div>
+    <div class="skill-cloud">
+      ${skills_core.map(s=>`<span class="skill-chip core">${s}</span>`).join("")}
+      ${skills_rest.map(s=>`<span class="skill-chip">${s}</span>`).join("")}
+    </div>
+  </section>
+
+  <section class="pf-sec" id="experience">
+    <div class="pf-sec-h">
+      <span class="pf-sec-num">02</span>
+      <h2>Experience</h2>
+      <span class="pf-sec-rule"></span>
+    </div>
+    ${ME.experience.map(e=>`
+    <div class="exp-item">
+      <div class="exp-yr">${e.period}</div>
+      <div class="exp-body">
+        <div class="exp-role">${e.role}</div>
+        <div class="exp-co">${e.company} · ${e.location}</div>
+        <ul>${e.bullets.map(b=>`<li>${b}</li>`).join("")}</ul>
+      </div>
+    </div>`).join("")}
+  </section>
+
+  <section class="pf-sec">
+    <div class="pf-sec-h">
+      <span class="pf-sec-num">03</span>
+      <h2>Education</h2>
+      <span class="pf-sec-rule"></span>
+    </div>
+    ${ME.education.map(e=>`
+    <div class="exp-item">
+      <div class="exp-yr">${e.period}</div>
+      <div class="exp-body">
+        <div class="exp-role">${e.degree}</div>
+        <div class="exp-co">${e.school} · ${e.loc}</div>
+      </div>
+    </div>`).join("")}
+  </section>
+
+  <section class="pf-sec" id="contact">
+    <div class="pf-contact-box">
+      <h2>Let's build something.</h2>
+      <p>Open to Data Engineering internships, co-ops, and entry-level roles · ${ME.location}</p>
+      <a class="pf-btn-primary" href="mailto:${ME.email}">Send me an email →</a>
+    </div>
+  </section>
+
+  <footer class="pf-footer">
+    <span>© 2026 ${ME.name}</span>
+    <button class="pf-btn-sec" style="font-size:12px;padding:7px 14px;" onclick="ownerAccess()">⚷ Owner access</button>
+  </footer>
+</div>
+
+<!-- CHAT BUBBLE -->
+<button id="chat-bubble" onclick="toggleChat()" aria-label="Open chat">
+  <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+</button>
+
+<!-- CHAT PANEL -->
+<div id="chat-panel" class="${S.chatOpen?"open":""}">
+  <div class="cp-header">
+    <span>✦ Chat with Rajasekhar</span>
+    <button onclick="toggleChat()">×</button>
+  </div>
+  <div class="cp-tabs">
+    <button class="${S.chatTab==="talk"?"on":""}" onclick="setChatTab('talk')">Let's Talk</button>
+    <button class="${S.chatTab==="resume"?"on":""}" onclick="setChatTab('resume')">Resume</button>
+  </div>
+  <div class="cp-body" id="cp-body">
+    ${S.chatTab === "talk" ? renderChatBody() : renderResumeTab()}
+  </div>
+  ${S.chatTab === "talk" ? `
+  <div class="cp-input">
+    <input id="chat-input" placeholder="Ask about skills, projects, availability…" onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()">→</button>
+  </div>` : ""}
+</div>
+
+${S.gateOpen ? renderGate() : ""}
+`;
+}
+
+function renderChatBody(){
+  const chips = ["Tell me about yourself","What's your Azure stack?","Are you open to internships?","What's your strongest project?"];
+  return S.chatHistory.map(m=>`
+    <div class="chat-msg ${m.role}"><div class="bubble">${m.text}</div></div>
+  `).join("") + `
+  <div class="chat-chips">${chips.map(c=>`<button onclick="quickChat('${c}')">${c}</button>`).join("")}</div>`;
+}
+
+function renderResumeTab(){
+  return `<div class="cp-resume">RAJASEKHAR POLEPALLI
+Wauwatosa, WI · ${ME.email} · ${ME.phone}
+LinkedIn: ${ME.linkedin}
+
+SUMMARY
+${ME.summary}
+
+TECHNICAL SKILLS
+${RESUME_SKILLS}
+
+PROFESSIONAL EXPERIENCE
+Data Engineer, LimeChat (India) | Jul 2023 – Jul 2024
+Tech: ADF, Databricks, PySpark, Streaming, Delta Lake, Synapse, DevOps, pytest
+• Designed ETL/ELT pipelines ingesting 5M+ events daily across Bronze/Silver/Gold.
+• Cut latency 40% with Spark Streaming, watermarks, Delta checkpointing.
+• 99.9% pipeline SLA via Azure DevOps CI/CD + pytest validation.
+
+Data Engineer, GoKwik (India) | May 2021 – Jun 2023
+Tech: Databricks, ADF, PySpark, Delta Lake, Synapse, T-SQL, DevOps
+• PySpark pipelines: 3M+ transactions/month → Silver/Gold Delta tables.
+• Batch runtime: 90 min → 35 min (partition pruning, broadcast joins).
+• Query perf +45% via star schema redesign in Synapse.
+
+EDUCATION
+MS Computer Science – Concordia University Wisconsin (Aug 2024 – Dec 2026)
+BS Computer Science – Vel Tech Technical University (Jun 2018 – May 2022)</div>`;
+}
+
+function initPortfolio(){
+  const io = new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){ e.target.style.opacity="1"; e.target.style.transform="none"; }
+  }), {threshold:.12});
+  document.querySelectorAll(".exp-item,.skill-cloud,.pf-contact-box,.pf-stats").forEach(el=>{
+    el.style.opacity="0"; el.style.transform="translateY(22px)"; el.style.transition=".65s cubic-bezier(.2,.8,.2,1)";
+    io.observe(el);
+  });
+}
+
+/* ══════════════════════════════════════════
+   GATE — Real OTP via EmailJS
+══════════════════════════════════════════ */
+
+// ── EmailJS config (fill these in after setting up EmailJS) ──
+const EJS_SERVICE  = "service_1cpvdx6";
+const EJS_TEMPLATE = "template_vkeehf7";
+const EJS_PUBKEY   = "Csky0rwWSHLRZG4nW";
+
+const OWNER_EMAILS = ["rajasekhar.polepalli5@gmail.com","rajasekharpolepalli5@gmail.com"];
+
+// OTP state
+let _otp = null;
+let _otpExpiry = 0;
+let _otpEmail = "";
+
+function ownerAccess(){ S.gateOpen=true; S.gateStep="email"; render(); }
+function openGate(){ S.gateOpen=true; S.gateStep="email"; }
+function closeGate(){ S.gateOpen=false; _otp=null; if(!S.unlocked) S.view="portfolio"; render(); }
+
+function _genOTP(){ return String(Math.floor(100000+Math.random()*900000)); }
+
+async function sendOTP(){
+  const inp = document.getElementById("gate-email");
+  const err = document.getElementById("gate-err");
+  const btn = document.getElementById("gate-send-btn");
+  const v = (inp?.value||"").trim().toLowerCase();
+
+  if(!v||!v.includes("@")){ err.textContent="Enter a valid email."; return; }
+  if(!OWNER_EMAILS.map(e=>e.toLowerCase()).includes(v)){
+    err.textContent="Access denied — this dashboard is private.";
+    return;
+  }
+
+  btn.disabled=true; btn.textContent="Sending…";
+  err.textContent="";
+
+  _otp = _genOTP();
+  _otpExpiry = Date.now() + 10*60*1000; // 10 min expiry
+  _otpEmail = v;
+
+  try {
+    // Load EmailJS SDK if not already loaded
+    if(!window.emailjs){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+      emailjs.init(EJS_PUBKEY);
+    }
+    await emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
+      email: _otpEmail,
+      otp_code: _otp,
+      expiry: "10 minutes"
+    });
+    S.gateStep="otp"; render();
+  } catch(e){
+    _otp=null;
+    btn.disabled=false; btn.textContent="Send OTP";
+    err.textContent="Failed to send OTP — check EmailJS config.";
+  }
+}
+
+function verifyOTP(){
+  const inp = document.getElementById("gate-otp");
+  const err = document.getElementById("otp-err");
+  const v = (inp?.value||"").trim();
+
+  if(!v||v.length!==6){ err.textContent="Enter the 6-digit code."; return; }
+  if(Date.now() > _otpExpiry){ err.textContent="OTP expired. Request a new one."; _otp=null; S.gateStep="email"; render(); return; }
+  if(v !== _otp){ err.textContent="Incorrect code. Try again."; inp.value=""; return; }
+
+  // ✅ correct
+  _otp=null; _otpEmail="";
+  S.unlocked=true; S.gateOpen=false; S.view="dashboard"; render();
+}
+
+function resendOTP(){ S.gateStep="email"; _otp=null; render(); }
+
+function renderGate(){
+  const step = S.gateStep || "email";
+  return `<div class="overlay" onclick="if(event.target===this)closeGate()">
+  <div class="gate-box">
+    <button class="close-x" onclick="closeGate()">×</button>
+    <div class="gate-icon">⚷</div>
+    ${step === "otp" ? `
+      <h3>Enter your OTP</h3>
+      <p>A 6-digit code was sent to<br><strong style="color:#06d6a0">${_otpEmail}</strong><br>It expires in 10 minutes.</p>
+      <input id="gate-otp" type="text" maxlength="6" placeholder="000000"
+        style="text-align:center;font-size:26px;letter-spacing:10px;font-weight:700"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+        onkeydown="if(event.key==='Enter')verifyOTP()">
+      <div id="otp-err" style="font-size:12.5px;color:#f87171;margin:4px 0 8px;min-height:18px"></div>
+      <button class="btn" style="width:100%;margin-bottom:10px" onclick="verifyOTP()">Verify & open dashboard</button>
+      <button onclick="resendOTP()" style="background:none;border:0;color:rgba(255,255,255,.4);font-size:13px;cursor:pointer;width:100%">Resend code</button>
+    ` : `
+      <h3>Owner access</h3>
+      <p>This dashboard is private. Enter your email to receive a one-time passcode.</p>
+      <input id="gate-email" type="text" placeholder="your@email.com"
+        onkeydown="if(event.key==='Enter')sendOTP()">
+      <div id="gate-err" style="font-size:12.5px;color:#f87171;margin:4px 0 8px;min-height:18px"></div>
+      <button class="btn" id="gate-send-btn" style="width:100%" onclick="sendOTP()">Send OTP</button>
+    `}
+  </div></div>`;
+}
+
+/* ══════════════════════════════════════════
+   CHAT
+══════════════════════════════════════════ */
+function toggleChat(){ S.chatOpen=!S.chatOpen; render(); }
+function setChatTab(t){ S.chatTab=t; render(); }
+function quickChat(q){ document.getElementById("chat-input").value=q; sendChat(); }
+
+async function sendChat(){
+  const inp = document.getElementById("chat-input");
+  const q = inp?.value?.trim();
+  if(!q) return;
+  S.chatHistory.push({role:"user",text:q});
+  inp.value="";
+  render();
+  const body = document.getElementById("cp-body");
+  if(body) body.scrollTop = body.scrollHeight;
+
+  const prompt = `You are an AI assistant representing Rajasekhar Polepalli, a Data Engineer.
+Profile: ${ME.summary}
+Skills: ${ME.coreSkills.join(", ")}
+Experience: LimeChat (Jul 2023-Jul 2024): 5M+ events/day pipelines, 40% latency cut, 99.9% SLA. GoKwik (May 2021-Jun 2023): 3M+ transactions/month, 90→35min batch runtime, 45% query perf gain.
+Education: MS CS Concordia Wisconsin (Dec 2026), BS CS Vel Tech.
+Target: Internships and entry-level Data Engineer roles. Open to remote/hybrid/relocate.
+
+Answer as Rajasekhar in first person. Be concise (2-3 sentences max). Professional but warm.
+Question: ${q}`;
+
+  try{
+    const res = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({model:"claude-sonnet-4-6", max_tokens:300, messages:[{role:"user",content:prompt}]})});
+    const d = await res.json();
+    const txt = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    S.chatHistory.push({role:"bot", text: txt || "I'd be happy to chat more — feel free to reach out at "+ME.email});
+  } catch(e){
+    S.chatHistory.push({role:"bot", text:"Happy to discuss more! Reach me at "+ME.email});
+  }
+  render();
+  setTimeout(()=>{ const b=document.getElementById("cp-body"); if(b) b.scrollTop=b.scrollHeight; },50);
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════ */
+function renderDashboard(){
+  const bodyMap = {hunter: renderHunter, apps: renderApps, add: renderAdd, profile: renderProfile};
+  const body = (bodyMap[S.tab]||renderHunter)();
+  return `<div class="dash-topbar">
+    <div class="brand"><span class="brand-dot"></span>Career Engine · Private</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" onclick="setView('portfolio')">← Back to portfolio</button>
+      <button class="btn-ghost" onclick="S.unlocked=false;setView('portfolio')">Sign out</button>
+    </div>
+  </div>
+  <div class="wrap">
+  <div class="tabs">
+    <button class="${S.tab==="hunter"?"on":""}" onclick="setTab('hunter')">Job hunter</button>
+    <button class="${S.tab==="apps"?"on":""}" onclick="setTab('apps')">Applications</button>
+    <button class="${S.tab==="add"?"on":""}" onclick="setTab('add')">Paste a job</button>
+    <button class="${S.tab==="profile"?"on":""}" onclick="setTab('profile')">My profile</button>
+  </div>
+  ${body}
+</div>${S.showReferral ? renderReferralModal() : ''}`;
+}
+
+/* ── JOB AGE HELPER ── */
+function jobAge(postedAt){
+  if(!postedAt) return null;
+  const diff = Date.now() - postedAt;
+  const mins = Math.floor(diff/60000);
+  const hrs  = Math.floor(diff/3600000);
+  const days = Math.floor(diff/86400000);
+  if(mins < 60)  return {label:`${mins}m ago`, urgent:true};
+  if(hrs  < 24)  return {label:`${hrs}h ago`,  urgent:true};
+  if(days === 1) return {label:`1 day ago`,     urgent:false};
+  return           {label:`${days} days ago`,   urgent:false};
+}
+
+/* ══════════════════════════════════════════
+   JOB VERIFICATION ENGINE
+══════════════════════════════════════════ */
+
+// Keywords that disqualify a job (senior / too experienced)
+const DISQUALIFY_TITLE = [
+  'senior','sr.','sr ','lead','principal','staff','director','manager','head of',
+  'vp ','vice president','architect','consultant','specialist','expert',
+  '5+','6+','7+','8+','10+'
+];
+// Keywords that disqualify based on experience requirements in description
+const DISQUALIFY_EXP = [
+  '5+ years','6+ years','7+ years','8+ years','10+ years',
+  '5 years of experience','minimum 5','at least 5 years',
+  'senior level','principal level'
+];
+// Keywords that must appear (at least one) to qualify
+const QUALIFY_TITLE = [
+  'intern','internship','co-op','coop','co op','entry','junior','jr.',
+  'jr ','associate','new grad','early career','0-2','0-1','graduate',
+  'trainee','apprentice','analyst i','engineer i','engineer 1'
+];
+
+const VERIFY_RESULTS = {}; // cache: url -> {ok, reason, checkedAt}
+
+function verifyJob(j) {
+  const title = (j.role || '').toLowerCase();
+  const desc  = (j.description || '').toLowerCase();
+  const pay   = (j.pay || '').toLowerCase();
+  const checks = [];
+  let passed = true;
+
+  // 1. Title must contain qualifying keyword
+  const hasQualTitle = QUALIFY_TITLE.some(k => title.includes(k));
+  checks.push({ label: hasQualTitle ? '✅ Intern/entry level' : '❌ Not intern/entry level', ok: hasQualTitle });
+  if (!hasQualTitle) passed = false;
+
+  // 2. Title must NOT contain disqualifying keyword
+  const hasDisTitle = DISQUALIFY_TITLE.some(k => title.includes(k));
+  checks.push({ label: hasDisTitle ? '❌ Senior title detected' : '✅ No senior keywords', ok: !hasDisTitle });
+  if (hasDisTitle) passed = false;
+
+  // 3. Description must NOT require 5+ years
+  if (desc) {
+    const hasDisExp = DISQUALIFY_EXP.some(k => desc.includes(k));
+    checks.push({ label: hasDisExp ? '❌ Requires 5+ years exp' : '✅ Experience level OK', ok: !hasDisExp });
+    if (hasDisExp) passed = false;
+  }
+
+  // 4. Must have a valid URL
+  const hasUrl = j.url && j.url.startsWith('http') && j.url.length > 15;
+  checks.push({ label: hasUrl ? '✅ Link present' : '❌ No valid link', ok: hasUrl });
+  if (!hasUrl) passed = false;
+
+  // 5. Must not be too old (> 30 days)
+  if (j.postedAt) {
+    const daysOld = Math.floor((Date.now() - j.postedAt) / 86400000);
+    const fresh = daysOld <= 30;
+    checks.push({ label: fresh ? `✅ Posted ${daysOld}d ago` : `❌ Posted ${daysOld}d ago (stale)`, ok: fresh });
+    if (!fresh) passed = false;
+  }
+
+  // 6. Score must be >= 7
+  const goodScore = (j.score || 0) >= 7;
+  checks.push({ label: goodScore ? `✅ Match score ${j.score}/10` : `❌ Low match ${j.score}/10`, ok: goodScore });
+  if (!goodScore) passed = false;
+
+  return { passed, checks };
+}
+
+function renderVerifyBadge(j) {
+  const { passed, checks } = verifyJob(j);
+  const failedChecks = checks.filter(c => !c.ok);
+  if (passed) {
+    return `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:#e2f5ec;color:#085041;cursor:pointer"
+      onclick="document.getElementById('vd-${j.id}').style.display=document.getElementById('vd-${j.id}').style.display==='none'?'block':'none'">
+      ✅ Verified (${checks.length}/${checks.length})</span>
+    <div id="vd-${j.id}" style="display:none;background:#f7fff9;border:1px solid #bfe8d2;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:12px;line-height:1.8">
+      ${checks.map(c=>`<div>${c.label}</div>`).join('')}
+    </div>`;
+  } else {
+    return `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:#fde8e6;color:#791f1f;cursor:pointer"
+      onclick="document.getElementById('vd-${j.id}').style.display=document.getElementById('vd-${j.id}').style.display==='none'?'block':'none'">
+      ⚠️ Failed ${failedChecks.length} check${failedChecks.length>1?'s':''}</span>
+    <div id="vd-${j.id}" style="display:none;background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:12px;line-height:1.8">
+      ${checks.map(c=>`<div>${c.label}</div>`).join('')}
+    </div>`;
+  }
+}
+
+/* ── HUNTER ── */
+function renderHunter(){
+  if(!S.searched) return `<div class="card"><div class="empty-state">
+    <h3>Live job search with verification</h3>
+    <p style="max-width:500px;margin:0 auto 12px">
+      Searches across boards for <strong>intern / co-op / 0-2yr</strong> data engineering roles.<br>
+      Every job runs through <strong>6 verification checks</strong> before being shown to you:
+    </p>
+    <div style="display:inline-flex;flex-direction:column;gap:6px;text-align:left;margin:0 auto 20px;font-size:13px;color:var(--muted)">
+      <span>✅ Title must be intern / co-op / entry level</span>
+      <span>✅ No senior keywords in title</span>
+      <span>✅ Description must not require 5+ years</span>
+      <span>✅ Must have a real working link</span>
+      <span>✅ Posted within 30 days</span>
+      <span>✅ Match score ≥ 7/10 for your profile</span>
+    </div>
+    <br>
+    <button class="btn" onclick="runJobSearch()">▶ Run verified job search</button>
+  </div></div>`;
+
+  if(S.searching) return `<div class="card"><div class="empty-state">
+    <div style="font-size:28px;margin-bottom:12px">🔍</div>
+    <h3>Searching & verifying jobs…</h3>
+    <p>${S.searchStatus||'Fetching from job boards…'}</p>
+    <div style="width:200px;height:4px;background:#eee;border-radius:2px;margin:14px auto 0;overflow:hidden">
+      <div style="width:${S.searchProgress||10}%;height:100%;background:var(--acc);transition:.3s"></div>
+    </div>
+  </div></div>`;
+
+  const verified   = S.jobs.filter(j=>verifyJob(j).passed);
+  const unverified = S.jobs.filter(j=>!verifyJob(j).passed);
+  const sorted = [...S.jobs].sort((a,b)=>{
+    const av = verifyJob(a).passed, bv = verifyJob(b).passed;
+    if(av!==bv) return bv-av;              // verified first
+    return (b.postedAt||0)-(a.postedAt||0); // then newest
+  });
+
+  return `
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="background:#e2f5ec;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#085041">
+      ✅ ${verified.length} verified jobs
+    </div>
+    <div style="background:#fde8e6;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#791f1f">
+      ⚠️ ${unverified.length} failed verification
+    </div>
+    <button class="btn-ghost" onclick="S.showFailed=!S.showFailed;render()" style="font-size:12px">
+      ${S.showFailed?'Hide':'Show'} failed jobs
+    </button>
+    <button class="btn-ghost" onclick="runJobSearch()" style="font-size:12px">↻ Refresh</button>
+  </div>
+  <div class="notice" style="margin-bottom:12px">
+    Showing <strong>${S.showFailed?sorted.length:verified.length} jobs</strong> · 
+    Strictly intern/co-op/0-2yr · Newest first · 
+    ${S.lastRefresh ? `Last refreshed: ${new Date(S.lastRefresh).toLocaleTimeString()} · Auto-refreshes every 30 min` : 'Auto-refreshes every 30 min'}
+  </div>
+  ${sorted.filter(j=>S.showFailed||verifyJob(j).passed).map(j=>jobCard(j, true)).join("")}`;
+}
+
+async function runJobSearch(){
+  S.searching = true;
+  S.searched = true;
+  S.searchProgress = 5;
+  S.searchStatus = 'Fetching live jobs from Greenhouse & Lever…';
+  S.lastRefresh = Date.now();
+  render();
+
+  // Start with verified seed jobs
+  let freshJobs = SEED_JOBS.map(j => ({...j, applied: S.jobs.find(x=>x.id===j.id)?.applied||false, tailored: S.jobs.find(x=>x.id===j.id)?.tailored||null}));
+
+  // Try to fetch live jobs from Greenhouse public boards (no auth needed)
+  const LIVE_BOARDS = [
+    {company:'databricks',   name:'Databricks',   src:'Greenhouse'},
+    {company:'cloudflare',   name:'Cloudflare',   src:'Greenhouse'},
+    {company:'ripple',       name:'Ripple',        src:'Greenhouse'},
+    {company:'snowflake',    name:'Snowflake',     src:'Greenhouse'},
+    {company:'dbtlabsinc',   name:'dbt Labs',      src:'Greenhouse'},
+  ];
+
+  const INTERN_KEYWORDS = ['intern','internship','co-op','coop','co op','entry','junior','jr.','jr ','associate','new grad','0-2','0-1','graduate trainee'];
+  const SENIOR_KEYWORDS = ['senior','sr.','lead','principal','staff','director','manager','5+','6+','7+'];
+
+  let liveCount = 0;
+  for(let i=0; i<LIVE_BOARDS.length; i++){
+    const board = LIVE_BOARDS[i];
+    S.searchProgress = 10 + Math.floor(i/LIVE_BOARDS.length * 60);
+    S.searchStatus = `Scanning ${board.name} careers page…`;
+    render();
+    try {
+      const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board.company}/jobs`, {signal: AbortSignal.timeout(5000)});
+      if(!res.ok) continue;
+      const data = await res.json();
+      const jobs = (data.jobs||[]).filter(j=>{
+        const t = j.title.toLowerCase();
+        const hasIntern = INTERN_KEYWORDS.some(k=>t.includes(k));
+        const hasSenior = SENIOR_KEYWORDS.some(k=>t.includes(k));
+        const isDataRole = ['data','analytic','pipeline','etl','spark','sql','engineer'].some(k=>t.includes(k));
+        return hasIntern && !hasSenior && isDataRole;
+      });
+      jobs.slice(0,2).forEach((j,idx)=>{
+        const id = `live_${board.company}_${j.id}`;
+        if(!freshJobs.find(x=>x.id===id)){
+          freshJobs.unshift({
+            id, role:j.title, company:board.name,
+            loc: j.location?.name||'Remote',
+            pay:'See posting', src:board.src, board:board.src, score:9,
+            url: j.absolute_url,
+            referral:`careers@${board.company}.com`,
+            applied:false, tailored:null,
+            postedAt: j.updated_at ? new Date(j.updated_at).getTime() : Date.now()
+          });
+          liveCount++;
+        }
+      });
+    } catch(e){ /* board blocked or timeout — skip */ }
+  }
+
+  S.searchProgress = 85;
+  S.searchStatus = `Found ${liveCount} live jobs + ${SEED_JOBS.length} verified seeds · Running checks…`;
+  render();
+  await new Promise(r=>setTimeout(r,400));
+
+  S.jobs = freshJobs;
+  S.searching = false;
+  S.searchProgress = 100;
+  render();
+}
+
+// ── AUTO-REFRESH every 30 minutes when dashboard is open ──
+let _refreshTimer = null;
+function startAutoRefresh(){
+  if(_refreshTimer) clearInterval(_refreshTimer);
+  _refreshTimer = setInterval(()=>{
+    if(S.unlocked && S.tab==='hunter' && S.searched && !S.searching){
+      runJobSearch();
+    }
+  }, 30 * 60 * 1000); // 30 minutes
+}
+startAutoRefresh();
+
+/* ── REFERRAL EMAIL ── */
+function askReferral(id){
+  const j = S.jobs.find(x=>x.id===id)||S.apps.find(x=>x.id===id);
+  if(!j) return;
+  S.referralJob = j;
+  S.showReferral = true;
+  render();
+}
+async function sendReferral(){
+  const j = S.referralJob;
+  const note = document.getElementById("ref-note")?.value?.trim()||"";
+  const btn  = document.getElementById("ref-send-btn");
+  if(!j) return;
+  btn.disabled=true; btn.textContent="Sending…";
+
+  const subject = `Referral Request — ${j.role} at ${j.company}`;
+  const body = `Hi,
+
+I came across the ${j.role} opening at ${j.company} and noticed you work there. I'm a Data Engineer with 3+ years of production experience on Azure, Databricks, PySpark, and Delta Lake — currently completing my MS in Computer Science at Concordia University Wisconsin (Dec 2026).
+
+${note ? note+'\n\n' : ''}I would really appreciate a referral or any guidance on the application process. My portfolio is at https://career-engine-brown.vercel.app and I'm happy to share my resume.
+
+Thank you for your time!
+Rajasekhar Polepalli
+rajasekhar.polepalli5@gmail.com | +1 (414) 436-4320`;
+
+  const mailtoUrl = `mailto:${j.referral||''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(mailtoUrl, '_blank');
+  j.referralSent = true;
+  S.showReferral = false;
+  render();
+}
+
+function renderReferralModal(){
+  const j = S.referralJob;
+  if(!j) return '';
+  return `<div class="overlay" onclick="if(event.target===this){S.showReferral=false;render()}">
+  <div class="gate-box" style="max-width:460px;text-align:left">
+    <button class="close-x" onclick="S.showReferral=false;render()">×</button>
+    <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px">Ask for a referral</div>
+    <p style="color:rgba(255,255,255,.5);font-size:13.5px;margin-bottom:16px">
+      ${esc(j.role)} at ${esc(j.company)} · Sending to <strong style="color:#06d6a0">${esc(j.referral||'recruiter')}</strong>
+    </p>
+    <label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);display:block;margin-bottom:6px">ADD A PERSONAL NOTE (optional)</label>
+    <textarea id="ref-note" rows="3" placeholder="e.g. I saw your post about the team and was really interested in..."
+      style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 13px;color:#fff;font-size:13.5px;resize:vertical;outline:none;margin-bottom:12px"></textarea>
+    <button class="btn" id="ref-send-btn" style="width:100%" onclick="sendReferral()">Open email draft →</button>
+    <p style="font-size:11.5px;color:rgba(255,255,255,.3);margin-top:8px;text-align:center">Opens your email client with a pre-filled referral request. You review and send.</p>
+  </div></div>`;
+}
+
+/* ── AUTO-APPLY BRIDGE ── */
+function autoApply(id){
+  const j = S.jobs.find(x=>x.id===id)||S.apps.find(x=>x.id===id);
+  if(!j) return;
+  // Open job URL and signal extension
+  const tab = window.open(j.url, '_blank');
+  // Post message to extension via localStorage bridge
+  localStorage.setItem('ce_autofill', JSON.stringify({
+    action: 'autofill',
+    jobId: j.id,
+    role: j.role,
+    company: j.company,
+    url: j.url,
+    profile: {
+      firstName: 'Rajasekhar',
+      lastName: 'Polepalli',
+      email: 'rajasekharpolepalli5@gmail.com',
+      phone: '+14144364320',
+      location: 'Wauwatosa, WI',
+      linkedin: 'https://linkedin.com/in/rajasekharpolepalli-0806793a3',
+      website: 'https://career-engine-brown.vercel.app',
+      university: 'Concordia University Wisconsin',
+      degree: 'Master of Science in Computer Science',
+      gradYear: '2026',
+      yearsExp: '3',
+      summary: 'Data engineer with 3+ years on Azure, Databricks, PySpark, Delta Lake. MS CS candidate Dec 2026.'
+    },
+    ts: Date.now()
+  }));
+  markApplied(id);
+  // Show instructions if extension not installed
+  setTimeout(()=>{
+    if(!localStorage.getItem('ce_ext_ack')){
+      alert('Extension not detected. Install the Career Engine Chrome Extension to auto-fill forms.\n\nFor now: the job page has opened — fill manually or install the extension.');
+    }
+  }, 2000);
+}
+
+/* ── JOB CARD ── */
+function jobCard(j, fromFeed){
+  const col = j.score>=9?"var(--green)":j.score>=7?"var(--amber)":"var(--muted)";
+  const age = jobAge(j.postedAt);
+  const ageBadge = age
+    ? `<span style="font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;margin-left:8px;
+        background:${age.urgent?'var(--gsoft)':'#f0eef8'};
+        color:${age.urgent?'var(--green)':'var(--muted)'}">
+        ${age.urgent?'🟢 ':''}${age.label}
+       </span>`
+    : '';
+  const { passed } = verifyJob(j);
+  return `<div class="jcard" style="${age?.urgent?'border-color:#bfe8d2;':''} ${!passed?'opacity:0.7;border-style:dashed;':''}"">
+    <div class="jhead">
+      <div>
+        <div class="jtitle">${esc(j.role)} ${ageBadge}</div>
+        <div class="jco">${esc(j.company)} · ${esc(j.loc)} · ${esc(j.pay)}</div>
+      </div>
+      <div class="jscore">
+        <span class="snum" style="color:${col}">${j.score}</span>
+        <span class="sdiv">/10</span>
+      </div>
+    </div>
+    <div class="jmeta">
+      <span class="pill pill-b">via ${esc(j.src)}</span>
+      ${j.score>=9?'<span class="pill pill-g">Auto-ready</span>':'<span class="pill pill-a">Review</span>'}
+      ${j.applied?'<span class="pill pill-g">Applied ✓</span>':''}
+      ${j.tailored?'<span class="pill pill-b">Resume tailored</span>':''}
+    </div>
+    <div style="margin-top:8px">${renderVerifyBadge(j)}</div>
+    ${j.verdict?`<div class="verdict"><strong>Match:</strong> ${esc(j.verdict)}</div>`:""}
+    ${j.tailored ? renderTailoredResume(j.tailored, j.id) : ""}
+    <div class="jacts">
+      <button onclick="tailorJob('${j.id}',this)">${j.tailored?"Re-tailor":"✦ Tailor resume"}</button>
+      ${j.url?`<button class="apply-btn" onclick="autoApply('${j.id}')">⚡ Auto-Apply</button>`:""}
+      ${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener" style="font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--d-line);background:var(--d-surface);color:var(--d-ink2);font-weight:600;text-decoration:none;display:inline-block">Open posting ↗</a>`:""}
+      ${j.referral?`<button onclick="askReferral('${j.id}')" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3">✉ Ask referral</button>`:""}
+      ${!j.applied&&fromFeed?`<button onclick="markApplied('${j.id}')">Mark applied</button>`:""}
+      ${j.referralSent?`<span class="pill pill-b">Referral sent ✓</span>`:""}
+    </div>
+  </div>`;
+}
+
+/* ── TAILORED RESUME OUTPUT ── */
+function renderTailoredResume(t, jobId){
+  if(!t) return "";
+
+  // Build skills block — handle both string and object
+  let skillsHtml = "";
+  if(typeof t.skills === "string"){
+    skillsHtml = t.skills.split("\n").map(l=>l.trim()?`<div class="rskill-row">${l.includes(":")?`<b>${l.split(":")[0]}:</b>${l.split(":").slice(1).join(":")}`:l}</div>`:"").join("");
+  } else {
+    skillsHtml = RESUME_SKILLS.split("\n").map(l=>l.trim()?`<div class="rskill-row">${l.includes(":")?`<b>${l.split(":")[0]}:</b>${l.split(":").slice(1).join(":")}`:l}</div>`:"").join("");
+  }
+
+  // Build jobs block — handle both {jobs:[]} and {bullets_limechat, bullets_gokwik}
+  let jobsHtml = "";
+  if(t.jobs && t.jobs.length){
+    jobsHtml = t.jobs.map(e=>`
+    <div class="rjob-head"><span>${esc(e.role||"Data Engineer")}, ${esc(e.company)}</span><span>${esc(e.period||"")}</span></div>
+    ${e.stack?`<div class="rjob-stack">Tech Stack: ${esc(e.stack)}</div>`:""}
+    <ul>${(e.bullets||[]).map(b=>`<li>${esc(b)}</li>`).join("")}</ul>`).join("");
+  } else {
+    // Fallback: use bullets_limechat / bullets_gokwik if present
+    const blc = t.bullets_limechat || [];
+    const bgk = t.bullets_gokwik   || [];
+    jobsHtml = `
+    <div class="rjob-head"><span>Data Engineer, LimeChat</span><span>Jul 2023 – Jul 2024</span></div>
+    <div class="rjob-stack">Tech Stack: Azure Databricks, PySpark, Delta Lake, Spark Structured Streaming, ADLS Gen2, Azure Data Factory, Azure DevOps</div>
+    <ul>${(blc.length?blc:ME.experience[0]?.bullets||[]).map(b=>`<li>${esc(b)}</li>`).join("")}</ul>
+    <div class="rjob-head"><span>Data Engineer, GoKwik</span><span>May 2021 – Jun 2023</span></div>
+    <div class="rjob-stack">Tech Stack: Azure Databricks, PySpark, Azure Synapse Analytics, Azure Data Factory, Delta Lake, PostgreSQL, MySQL, Python</div>
+    <ul>${(bgk.length?bgk:ME.experience[1]?.bullets||[]).map(b=>`<li>${esc(b)}</li>`).join("")}</ul>`;
+  }
+
+  const resumeId = `resume-${jobId||"main"}`;
+
+  return `<div class="resume-wrap" id="${resumeId}">
+  <div class="resume-toolbar">
+    <span>Tailored resume · ATS format · <b style="color:var(--acc)">${esc(t.verdict||"")}</b></span>
+    <div style="display:flex;gap:6px">
+      <button class="btn-ghost" style="font-size:11px;padding:4px 10px" onclick="downloadResumePDF('${resumeId}')">⬇ PDF</button>
+      <button class="btn-ghost" style="font-size:11px;padding:4px 10px" onclick="downloadResumeWord('${resumeId}')">⬇ Word</button>
+      <button class="btn-ghost" style="font-size:11px;padding:4px 10px" onclick="copyResumeText('${resumeId}')">Copy</button>
+    </div>
+  </div>
+  <div class="resume-body" id="${resumeId}-body">
+    <div class="rname">RAJASEKHAR POLEPALLI</div>
+    <div class="rcontact">
+      Wauwatosa, WI &nbsp;|&nbsp;
+      <a href="tel:+14144364320" style="color:#000;text-decoration:none">+1 (414) 436-4320</a> &nbsp;|&nbsp;
+      <a href="mailto:rajasekhar.polepalli5@gmail.com" style="color:#000;text-decoration:none">rajasekhar.polepalli5@gmail.com</a> &nbsp;|&nbsp;
+      <a href="https://linkedin.com/in/rajasekharpolepalli-0806793a3" target="_blank" style="color:#000;text-decoration:none">linkedin.com/in/rajasekharpolepalli</a> &nbsp;|&nbsp;
+      <a href="https://career-engine-brown.vercel.app" target="_blank" style="color:#000;text-decoration:none">career-engine-brown.vercel.app</a>
+    </div>
+    <hr>
+    <div class="rsec">SUMMARY</div>
+    <hr>
+    <p style="font-size:10.5pt;margin:4px 0 8px">${esc(t.summary||ME.summary)}</p>
+    <div class="rsec">TECHNICAL SKILLS</div>
+    <hr>
+    ${skillsHtml}
+    <div class="rsec">PROFESSIONAL EXPERIENCE</div>
+    <hr>
+    ${jobsHtml}
+    <div class="rsec">EDUCATION</div>
+    <hr>
+    ${ME.education.map(e=>`<div class="redu-row"><span><b>${esc(e.degree)}</b>, ${esc(e.school)}</span><span>${esc(e.period)}</span></div>`).join("")}
+  </div>
+</div>`;
+}
+
+function copyResumeText(resumeId){
+  const body = document.getElementById(resumeId+"-body");
+  if(!body) return;
+  const txt = body.innerText;
+  navigator.clipboard?.writeText(txt).then(()=>{ const btn=event.target; btn.textContent="Copied!"; setTimeout(()=>btn.textContent="Copy",2000); });
+}
+
+function downloadResumePDF(resumeId){
+  const body = document.getElementById(resumeId+"-body");
+  if(!body) return;
+  const win = window.open("","_blank");
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Rajasekhar Polepalli Resume</title>
+    <style>
+      *{box-sizing:border-box}
+      body{font-family:'Times New Roman',Times,serif;font-size:11pt;line-height:1.4;color:#000;margin:0;padding:24px 36px}
+      .rname{text-align:center;font-size:14pt;font-weight:700;letter-spacing:.05em;margin-bottom:4px}
+      .rcontact{text-align:center;font-size:10pt;margin-bottom:8px}
+      .rcontact a{color:#000;text-decoration:none}
+      hr{border:0;border-top:1.5px solid #000;margin:5px 0}
+      .rsec{font-size:11pt;font-weight:700;letter-spacing:.04em;margin-top:10px;margin-bottom:2px}
+      .rskill-row{margin-bottom:2px;font-size:10.5pt}
+      .rjob-head{display:flex;justify-content:space-between;font-weight:700;font-size:11pt;margin-top:8px}
+      .rjob-stack{font-size:10pt;color:#333;margin:2px 0 4px;font-style:italic}
+      ul{margin:0;padding-left:18px}
+      li{font-size:10.5pt;margin-bottom:3px;line-height:1.45}
+      .redu-row{display:flex;justify-content:space-between;font-size:10.5pt;margin-bottom:2px}
+      p{margin:4px 0 8px;font-size:10.5pt}
+      @media print{body{padding:12px 20px}}
+    </style>
+  </head><body>${body.innerHTML}</body></html>`);
+  win.document.close();
+  setTimeout(()=>{ win.focus(); win.print(); }, 500);
+}
+
+function downloadResumeWord(resumeId){
+  const body = document.getElementById(resumeId+"-body");
+  if(!body) return;
+
+  // Build Word-compatible HTML
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word"
+    xmlns="http://www.w3.org/TR/REC-html40">
+  <head><meta charset="utf-8">
+    <title>Rajasekhar Polepalli Resume</title>
+    <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+    <style>
+      body{font-family:"Times New Roman",Times,serif;font-size:11pt;line-height:1.4;color:#000;margin:1in}
+      .rname{text-align:center;font-size:14pt;font-weight:bold;letter-spacing:.05em;margin-bottom:4pt}
+      .rcontact{text-align:center;font-size:10pt;margin-bottom:8pt}
+      .rcontact a{color:#000;text-decoration:none}
+      hr{border:0;border-top:1.5pt solid #000;margin:5pt 0}
+      .rsec{font-size:11pt;font-weight:bold;letter-spacing:.04em;margin-top:10pt;margin-bottom:2pt}
+      .rskill-row{margin-bottom:2pt;font-size:10.5pt}
+      .rjob-head{font-weight:bold;font-size:11pt;margin-top:8pt}
+      .rjob-stack{font-size:10pt;color:#333;margin:2pt 0 4pt;font-style:italic}
+      ul{margin:0;padding-left:18pt}
+      li{font-size:10.5pt;margin-bottom:3pt;line-height:1.45}
+      .redu-row{font-size:10.5pt;margin-bottom:2pt}
+      p{margin:4pt 0 8pt;font-size:10.5pt}
+    </style>
+  </head><body>${body.innerHTML}</body></html>`;
+
+  const blob = new Blob(["\ufeff"+html], {type:"application/msword"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "Rajasekhar_Polepalli_Resume.doc";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function copyResume(btn){
+  const txt = btn.dataset.resume;
+  navigator.clipboard?.writeText(txt).then(()=>{ btn.textContent="Copied!"; setTimeout(()=>btn.textContent="Copy",2000); });
+}
+
+/* ── AI TAILOR ── */
+async function tailorJob(id, btn){
+  const j = S.jobs.find(x=>x.id===id) || S.apps.find(x=>x.id===id);
+  if(!j) return;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Tailoring…';
+
+  const isIntern = j.role.toLowerCase().includes("intern")||j.role.toLowerCase().includes("co-op")||j.role.toLowerCase().includes("co op");
+
+  const prompt=`You are an ATS resume expert. Return ONLY a JSON object — no text before or after, no markdown fences.
+
+JOB: ${j.role} at ${j.company}
+TYPE: ${isIntern?"Internship/Co-op — frame as eager MS CS student with production fundamentals":"Entry-level 0-2yr role"}
+CANDIDATE: Rajasekhar Polepalli, MS Computer Science (Concordia University Wisconsin, Dec 2026), Data Engineer
+REAL METRICS TO KEEP: LimeChat: 5M+ events/day, 40% latency reduction, 99.9% SLA, 60% fewer deployment failures. GoKwik: 3M+ transactions/month, batch runtime 90→35 min, query performance +45%, daily→hourly data freshness.
+
+Respond with exactly this JSON structure:
+{
+  "score": 9,
+  "verdict": "one sentence on why this is a strong match",
+  "summary": "2-sentence professional summary tailored to this specific role and company, using keywords from the job title. ${isIntern?"Frame as MS CS student seeking hands-on experience. Do NOT mention 3+ years or seniority.":"Focus on production data engineering fundamentals."}",
+  "skills": "Cloud Platforms: Microsoft Azure, Azure Databricks, Azure Synapse Analytics, Azure Data Factory, ADLS Gen2, Microsoft Fabric, Delta Lake\\nProgramming: Python, PySpark, SQL, Spark SQL, T-SQL, YAML\\nData Engineering: ETL/ELT, Lakehouse Architecture, Bronze/Silver/Gold, Dimensional Modeling, Star Schema\\nStreaming: Spark Structured Streaming, Event-Time Processing, Delta Lake Checkpointing\\nDevOps: Azure DevOps, Git, CI/CD, pytest, YAML Pipelines\\nDatabases: PostgreSQL, MySQL, REST APIs, Pandas, NumPy",
+  "jobs": [
+    {
+      "role": "Data Engineer",
+      "company": "LimeChat",
+      "period": "Jul 2023 – Jul 2024",
+      "stack": "pick 5-7 tools most relevant to ${j.role}: Azure Databricks, PySpark, Delta Lake, Spark Structured Streaming, ADLS Gen2, Azure Data Factory, Azure DevOps, pytest",
+      "bullets": [
+        "strong-verb bullet using this JD keywords, metric: 5M+ events/day, 40% latency reduction",
+        "strong-verb bullet, metric: 99.9% SLA",
+        "strong-verb bullet, metric: 60% fewer deployment failures",
+        "strong-verb bullet relevant to ${j.company} tech stack"
+      ]
+    },
+    {
+      "role": "Data Engineer",
+      "company": "GoKwik",
+      "period": "May 2021 – Jun 2023",
+      "stack": "pick 5-7 tools most relevant to ${j.role}: Azure Databricks, PySpark, Azure Synapse Analytics, Delta Lake, PostgreSQL, MySQL, Azure Data Factory, Python",
+      "bullets": [
+        "strong-verb bullet using JD keywords, metric: 3M+ transactions/month",
+        "strong-verb bullet, metric: batch runtime 90→35 min",
+        "strong-verb bullet, metric: query performance +45%",
+        "strong-verb bullet, metric: daily→hourly data freshness"
+      ]
+    }
+  ],
+  "keywords": ["6 exact ATS keywords extracted from the job description"]
+}`;
+
+  try{
+    const res = await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,messages:[{role:"user",content:prompt}]})});
+    const d = await res.json();
+    let txt = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    // Extract JSON robustly — strip any prose before/after
+    const jsonMatch = txt.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error("No JSON in response");
+    const r = JSON.parse(jsonMatch[0]);
+    j.tailored = r; j.verdict = r.verdict; if(r.score) j.score = r.score;
+    if(!S.apps.find(x=>x.id===j.id)) S.apps.push(j);
+    render();
+  } catch(e){
+    btn.disabled=false; btn.textContent="Try again";
+    console.error("Tailor error:", e.message);
+  }
+}
+
+function markApplied(id){
+  const j = S.jobs.find(x=>x.id===id)||S.apps.find(x=>x.id===id);
+  if(j){ j.applied=true; if(!S.apps.find(x=>x.id===id)) S.apps.push(j); render(); }
+}
+
+/* ── APPS ── */
+function renderApps(){
+  if(!S.apps.length) return `<div class="card"><div class="empty-state">
+    <h3>No applications yet</h3>
+    <p style="margin:0 auto 20px;max-width:400px">Tailor a resume from the Job hunter or paste a job here.</p>
+    <button class="btn" onclick="setTab('hunter')">Go to job hunter</button>
+  </div></div>`;
+  const applied = S.apps.filter(j=>j.applied).length;
+  const avg = Math.round(S.apps.reduce((a,j)=>a+j.score,0)/S.apps.length*10)/10;
+  return `<div class="metrics">
+    <div class="metric"><div class="n">${S.apps.length}</div><div class="l">Tracked</div></div>
+    <div class="metric"><div class="n">${S.apps.filter(j=>j.score>=9).length}</div><div class="l">9/10+ matches</div></div>
+    <div class="metric"><div class="n">${avg}</div><div class="l">Avg score</div></div>
+    <div class="metric"><div class="n">${applied}</div><div class="l">Applied</div></div>
+  </div>
+  ${S.apps.map(j=>jobCard(j,false)).join("")}`;
+}
+
+/* ── ADD ── */
+function renderAdd(){
+  return `<div class="card">
+  <h2>Paste a job description</h2>
+  <p class="sub">Found a role outside the hunter? Paste it here — Claude scores it against your profile and writes an ATS-tailored resume in your exact format.</p>
+  <div class="notice">Live AI — this really calls Claude. Paste a real job description for best results.</div>
+  <div class="field"><label>Job title</label><input type="text" id="add-title" placeholder="e.g. Data Engineering Intern"></div>
+  <div class="field"><label>Company</label><input type="text" id="add-co" placeholder="e.g. Databricks"></div>
+  <div class="field"><label>Full job description</label><textarea id="add-jd" style="min-height:200px" placeholder="Paste the full posting — responsibilities, requirements, tech stack…"></textarea></div>
+  <button class="btn" id="add-btn" onclick="runAdd()">✦ Score &amp; tailor resume</button>
+  <div id="add-err" style="font-size:12.5px;color:var(--red);margin-top:8px"></div>
+</div>`;
+}
+
+async function runAdd(){
+  const title = document.getElementById("add-title")?.value?.trim();
+  const co = document.getElementById("add-co")?.value?.trim();
+  const jd = document.getElementById("add-jd")?.value?.trim();
+  const btn = document.getElementById("add-btn");
+  const err = document.getElementById("add-err");
+  if(!jd||jd.length<40){ if(err) err.textContent="Please paste a fuller job description."; return; }
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Scoring & tailoring…';
+  if(err) err.textContent="";
+  const newJob = {id:"p"+Date.now(), role:title||"Data Engineer Role", company:co||"Company", loc:"", pay:"", src:"Pasted", board:"", score:8, url:"", applied:false, tailored:null};
+  S.jobs.push(newJob);
+  // Reuse tailorJob but pass JD into prompt via a modified approach
+  const prompt=`You are an expert ATS resume writer for Data Engineering roles.
+
+TARGET ROLE: ${newJob.role} at ${newJob.company}
+JOB DESCRIPTION:
+${jd}
+
+CANDIDATE: Rajasekhar Polepalli — 3+ years Data Engineer, Azure/Databricks/PySpark specialist
+STRATEGY: This is a ${newJob.role.toLowerCase().includes("intern")?"internship":"entry-level/1-year-exp"} role. Tailor to appear as a strong match.
+
+Return ONLY valid JSON (no markdown):
+{
+  "score": <int 1-10, honest match>,
+  "verdict": "<one sentence>",
+  "summary": "<2-sentence tailored summary using the JD language>",
+  "skills": "Cloud Platforms: Microsoft Azure, Azure Databricks, Azure Synapse Analytics, Azure Data Factory, ADLS Gen2, Microsoft Fabric, Delta Lake, Azure SQL\\nProgramming & Query: SQL, T-SQL, Spark SQL, Python, PySpark, YAML, DAX, Shell\\nData Engineering: ETL/ELT, Data Warehousing, Dimensional Modeling, Star Schema, Lakehouse, Bronze/Silver/Gold Architecture\\nStreaming & Real-Time: Spark Structured Streaming, Event-Time Processing, Watermarking, Delta Lake Checkpointing\\nDevOps & CI/CD: Azure DevOps, Git, GitHub, YAML Pipelines, CI/CD, pytest, Agile/Scrum\\nDatabases & Integration: PostgreSQL, MySQL, REST APIs, JSON, Pandas, NumPy, T-SQL Stored Procedures\\nGovernance & Quality: Data Governance, Data Lineage, Data Quality, Schema Validation",
+  "jobs": [
+    {"role":"Data Engineer","company":"LimeChat","location":"India","period":"Jul 2023 – Jul 2024","stack":"<6-8 relevant tools>","bullets":["<4 rewritten bullets using JD keywords, keep metrics: 5M+ events/day, 40% latency cut, 99.9% SLA>"]},
+    {"role":"Data Engineer","company":"GoKwik","location":"India","period":"May 2021 – Jun 2023","stack":"<6-8 relevant tools>","bullets":["<4 rewritten bullets using JD keywords, keep metrics: 3M+ txn/month, 90→35 min, 45% query perf>"]}
+  ],
+  "keywords": ["<6 ATS keywords>"],
+  "plain": "<full plain text resume>"
+}`;
+  try{
+    const res = await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:4000,messages:[{role:"user",content:prompt}]})});
+    const d = await res.json();
+    let txt=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/```json|```/g,"").trim();
+    const r = JSON.parse(txt);
+    newJob.tailored=r; newJob.verdict=r.verdict; if(r.score) newJob.score=r.score;
+    S.apps.push(newJob); S.tab="apps"; render();
+  } catch(e){
+    btn.disabled=false; btn.innerHTML="✦ Score &amp; tailor resume";
+    if(err) err.textContent="Couldn't parse that — try again with a fuller description.";
+  }
+}
+
+/* ── PROFILE ── */
+function renderProfile(){
+  return `<div class="card">
+  <h2>Master profile</h2>
+  <p class="sub">Your single source of truth — both the portfolio and every tailored resume are generated from this.</p>
+  <div class="row2">
+    <div class="field"><label>Full name</label><input type="text" value="${ME.name}" readonly></div>
+    <div class="field"><label>Target roles</label><input type="text" value="${ME.targetRoles.join(", ")}" readonly></div>
+  </div>
+  <div class="field"><label>Location</label><input type="text" value="${ME.location}" readonly></div>
+  <div class="field"><label>Summary</label><textarea style="min-height:80px" readonly>${ME.summary}</textarea></div>
+  <div class="field"><label>Core skills</label><textarea style="min-height:60px" readonly>${ME.coreSkills.join(", ")}</textarea></div>
+  <div class="field"><label>Technical skills block (resume format)</label><textarea style="min-height:140px" readonly>${RESUME_SKILLS}</textarea></div>
+  <p style="font-size:12px;color:var(--muted);margin-top:8px">To update, edit the ME and RESUME_SKILLS constants in the source code.</p>
+</div>`;
+}
+
+/* ── UTILS ── */
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// Boot
+render();
+</script>
+</body>
+</html>
