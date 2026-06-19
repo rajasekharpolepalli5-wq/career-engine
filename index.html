@@ -959,15 +959,40 @@ async function runJobSearch(){
     {company:'veeva',           name:'Veeva',            src:'Greenhouse'},
     {company:'benchling',       name:'Benchling',        src:'Greenhouse'},
   ];
-  const INTERN_KW  = ['intern','internship','co-op','coop','co op','entry','junior','new grad','0-2','0-1','graduate','trainee','associate engineer','engineer i','engineer 1'];
-  const SENIOR_KW  = ['senior','sr.','sr ','lead','principal','staff','director','manager','5+','6+','7+','vp ','head of'];
-  const DATA_KW    = ['data','analytic','pipeline','etl','spark','sql','engineer','platform','warehouse'];
+  const INTERN_KW  = ['intern','internship','co-op','coop','co op','entry level','junior','new grad','0-2 year','0-1 year','graduate engineer','trainee','new graduate'];
+  const SENIOR_KW  = ['senior','sr.','sr ','lead','principal','staff','director','manager','5+','6+','7+','vp ','head of','distinguished','phd','iii','iv',' ii ',' ii,'];
+  // STRICT: title must contain an explicit data-engineering phrase — not just "engineer" or "data"
+  const DATA_TITLE_KW = [
+    'data engineer','data engineering','data pipeline','data platform',
+    'data infrastructure','data warehouse','analytics engineer','analytics engineering',
+    'etl engineer','etl developer','data ops','dataops','data operations',
+    'data integration','spark engineer','lakehouse','lake engineer',
+    'bi engineer','business intelligence engineer','ml engineer','mlops',
+    'machine learning engineer','ai engineer','cloud data','azure data',
+    'aws data','gcp data','database engineer','sql engineer'
+  ];
+
+  // Score each job 1-10 based on how well it matches Rajasekhar's profile
+  function scoreJob(title){
+    const t = title.toLowerCase();
+    let score = 7; // base
+    if(t.includes('data engineer')) score = 10;
+    else if(t.includes('data engineering')) score = 10;
+    else if(t.includes('analytics engineer')) score = 9;
+    else if(t.includes('etl')) score = 9;
+    else if(t.includes('data platform') || t.includes('data pipeline')) score = 9;
+    else if(t.includes('data infrastructure') || t.includes('data warehouse')) score = 8;
+    else if(t.includes('ml engineer') || t.includes('machine learning engineer')) score = 8;
+    else if(t.includes('cloud data') || t.includes('azure data')) score = 9;
+    if(t.includes('intern') || t.includes('co-op')) score = Math.min(score, 9);
+    return score;
+  }
 
   let liveCount = 0;
   for(let i=0; i<LIVE_BOARDS.length; i++){
     const board = LIVE_BOARDS[i];
     S.searchProgress = 5 + Math.floor(i/LIVE_BOARDS.length * 35);
-    S.searchStatus = `Scanning ${board.name} job board…`;
+    S.searchStatus = `Scanning ${board.name} (${i+1}/${LIVE_BOARDS.length})…`;
     render();
     try {
       const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board.company}/jobs`,
@@ -977,18 +1002,20 @@ async function runJobSearch(){
       const matched = (data.jobs||[]).filter(j=>{
         const t = j.title.toLowerCase();
         const loc = j.location?.name||'';
-        return INTERN_KW.some(k=>t.includes(k)) &&
-               !SENIOR_KW.some(k=>t.includes(k)) &&
-               DATA_KW.some(k=>t.includes(k)) &&
-               isUSA(loc); // USA only
+        // Must have intern/entry qualifier AND a strict data engineering title term
+        const hasIntern  = INTERN_KW.some(k=>t.includes(k));
+        const hasSenior  = SENIOR_KW.some(k=>t.includes(k));
+        const isDataRole = DATA_TITLE_KW.some(k=>t.includes(k));
+        return hasIntern && !hasSenior && isDataRole && isUSA(loc);
       });
-      matched.slice(0,2).forEach(j=>{
+      matched.slice(0,3).forEach(j=>{
         const id = `live_${board.company}_${j.id}`;
         if(!freshJobs.find(x=>x.id===id)){
           freshJobs.unshift({
             id, role:j.title, company:board.name,
             loc: j.location?.name||'Remote',
-            pay:'See posting', src:board.src, board:board.src, score:9,
+            pay:'See posting', src:board.src, board:board.src,
+            score: scoreJob(j.title),
             url: j.absolute_url,
             referral:`careers@${board.company.toLowerCase()}.com`,
             applied:false, tailored:null, linkStatus:null,
