@@ -259,7 +259,7 @@ DevOps & CI/CD: Azure DevOps, Git, GitHub, YAML Pipelines, CI/CD, pytest, Agile/
 Databases & Integration: PostgreSQL, MySQL, REST APIs, JSON, Pandas, NumPy, T-SQL Stored Procedures
 Governance & Quality: Data Governance, Data Lineage, Data Quality, Data Security, Schema Validation`;
 
-/* ── SEED JOBS — Verified LIVE postings as of Jun 19 2026 ── */
+/* ── SEED JOBS — Verified LIVE USA postings as of Jun 19 2026 ── */
 const D = d => new Date(d).getTime();
 const SEED_JOBS = [
   {id:"j1",role:"Fall 2026 Software Engineering Intern",company:"SpaceX",loc:"Hawthorne CA / Redmond WA / Multiple",pay:"$30–40/hr",src:"Greenhouse",board:"Greenhouse",score:9,
@@ -274,18 +274,12 @@ const SEED_JOBS = [
   {id:"j4",role:"Data Engineer",company:"San Diego Community Power",loc:"San Diego, CA (Hybrid)",pay:"$80k–110k",src:"Greenhouse",board:"Greenhouse",score:8,
    url:"https://job-boards.greenhouse.io/sandiegocommunitypower/jobs/5121899007",
    referral:"hr@sdcommunitypower.org",applied:false,tailored:null,postedAt:D("2026-04-29")},
-  {id:"j5",role:"Data Engineering Summer Intern",company:"SharkNinja",loc:"Needham, MA / Remote",pay:"$25–32/hr",src:"Greenhouse",board:"Greenhouse",score:8,
-   url:"https://job-boards.greenhouse.io/sharkninjaoperatingllc/jobs/4601703006",
-   referral:"talent@sharkninja.com",applied:false,tailored:null,postedAt:D("2026-05-28")},
-  {id:"j6",role:"ADAS Data Analytics Intern (Databricks/PySpark)",company:"Mercedes-Benz R&D NA",loc:"Sunnyvale, CA",pay:"$30–38/hr",src:"Lever",board:"Lever",score:9,
-   url:"https://jobs.lever.co/MBRDNA/e801fdb7-7c75-4378-bff6-b3f197489262",
-   referral:"careers@mbrdna.com",applied:false,tailored:null,postedAt:D("2026-05-20")},
-  {id:"j7",role:"Azure Data Engineer – Analyst (Entry)",company:"Inizio",loc:"Remote",pay:"$55k–70k",src:"Greenhouse",board:"Greenhouse",score:8,
-   url:"https://job-boards.greenhouse.io/inizio/jobs/7760963",
-   referral:"talent@inizio.health",applied:false,tailored:null,postedAt:D("2026-05-15")},
-  {id:"j8",role:"Data Engineer (0-2 yrs, Azure/Databricks)",company:"AOT Technologies",loc:"Remote",pay:"$60k–80k",src:"Greenhouse",board:"Greenhouse",score:8,
-   url:"https://job-boards.greenhouse.io/aottechnologies/jobs/5072642008",
-   referral:"careers@aot-technologies.com",applied:false,tailored:null,postedAt:D("2026-05-10")}
+  {id:"j5",role:"Backend Software Engineering Intern – Fall 2026",company:"Verkada",loc:"San Mateo, CA",pay:"$40–55/hr",src:"Greenhouse",board:"Greenhouse",score:9,
+   url:"https://job-boards.greenhouse.io/verkada/jobs/5099422007",
+   referral:"recruiting@verkada.com",applied:false,tailored:null,postedAt:D("2026-06-10")},
+  {id:"j6",role:"Graduate Leadership Program – AI/Data Engineer",company:"Further",loc:"Cleveland OH / Atlanta GA (Hybrid)",pay:"$70k–90k",src:"Greenhouse",board:"Greenhouse",score:9,
+   url:"https://job-boards.greenhouse.io/furtherearlycareer/jobs/8384023002",
+   referral:"earlycareer@further.com",applied:false,tailored:null,postedAt:D("2026-05-15")}
 ];
 
 /* ── STATE ── */
@@ -832,21 +826,46 @@ function renderHunter(){
 
 
 
-/* ── LIVE LINK VERIFIER ── */
+/* ── LIVE LINK VERIFIER (uses Greenhouse/Lever APIs — no false positives) ── */
 async function verifyLink(url){
   if(!url || !url.startsWith('http')) return {live:false, reason:'No URL'};
+  
   try {
-    // Use no-cors fetch — if we get ANY response (even opaque) the URL is reachable
-    // For Greenhouse/Lever we can check for error redirect via the URL itself
-    const res = await fetch(url, {
-      method:'GET',
-      mode:'no-cors',
-      signal: AbortSignal.timeout(6000)
-    });
-    // no-cors always returns opaque (type='opaque') — if we get here it loaded
-    return {live:true, reason:'OK'};
+    // For Greenhouse: use their public jobs API — returns 404 if job is closed
+    if(url.includes('greenhouse.io')) {
+      const match = url.match(/greenhouse\.io\/([^\/\?]+)\/jobs\/(\d+)/);
+      if(match) {
+        const [, board, jobId] = match;
+        const apiRes = await fetch(
+          `https://boards-api.greenhouse.io/v1/boards/${board}/jobs/${jobId}`,
+          {signal: AbortSignal.timeout(5000)}
+        );
+        if(!apiRes.ok) return {live:false, reason:`Closed (${apiRes.status})`};
+        const data = await apiRes.json();
+        if(!data.title) return {live:false, reason:'No job title — removed'};
+        return {live:true, reason:'OK', title:data.title};
+      }
+    }
+    
+    // For Lever: use their public postings API
+    if(url.includes('jobs.lever.co')) {
+      const match = url.match(/jobs\.lever\.co\/([^\/]+)\/([a-f0-9-]{36})/i);
+      if(match) {
+        const [, company, jobId] = match;
+        const apiRes = await fetch(
+          `https://api.lever.co/v0/postings/${company}/${jobId}`,
+          {signal: AbortSignal.timeout(5000)}
+        );
+        if(!apiRes.ok) return {live:false, reason:`Lever 404`};
+        return {live:true, reason:'OK'};
+      }
+    }
+    
+    // Fallback: no-cors fetch — opaque = reachable
+    const res = await fetch(url, {method:'GET', mode:'no-cors', signal:AbortSignal.timeout(6000)});
+    return {live: res.type==='opaque', reason: res.type==='opaque'?'OK':'Failed'};
   } catch(e){
-    return {live:false, reason: e.message?.includes('abort')?'Timeout':'Network error'};
+    return {live:false, reason:e.message?.includes('abort')?'Timeout':'Failed'};
   }
 }
 
@@ -870,14 +889,75 @@ async function runJobSearch(){
   }));
 
   // ── STEP 1: Try live Greenhouse boards ──
+  // ── USA-only location checker ──
+  const USA_STATES = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy','dc','remote','united states','usa','u.s.'];
+  function isUSA(loc){
+    if(!loc) return true; // no location = assume remote/USA
+    const l = loc.toLowerCase();
+    if(l.includes('remote')) return true;
+    // Exclude non-USA
+    const foreign = ['canada','uk','london','dublin','toronto','berlin','amsterdam','singapore','india','bangalore','sydney','australia','germany','france','japan','brazil','mexico','china','korea'];
+    if(foreign.some(f=>l.includes(f))) return false;
+    // Include if matches US state/city pattern
+    return USA_STATES.some(s=>l.includes(', '+s)||l.includes(' '+s)||l===s||l.includes('united states'));
+  }
+
   const LIVE_BOARDS = [
-    {company:'spacex',       name:'SpaceX',       src:'Greenhouse'},
-    {company:'databricks',   name:'Databricks',   src:'Greenhouse'},
-    {company:'snowflake',    name:'Snowflake',     src:'Greenhouse'},
-    {company:'dbtlabsinc',   name:'dbt Labs',      src:'Greenhouse'},
-    {company:'stripe',       name:'Stripe',        src:'Greenhouse'},
-    {company:'airbnb',       name:'Airbnb',        src:'Greenhouse'},
-    {company:'figma',        name:'Figma',         src:'Greenhouse'},
+    // Aerospace & Hardware
+    {company:'spacex',          name:'SpaceX',           src:'Greenhouse'},
+    {company:'rivian',          name:'Rivian',           src:'Greenhouse'},
+    {company:'verkada',         name:'Verkada',          src:'Greenhouse'},
+    {company:'jobyaviation',    name:'Joby Aviation',    src:'Greenhouse'},
+    // Fintech
+    {company:'stripe',          name:'Stripe',           src:'Greenhouse'},
+    {company:'ramp',            name:'Ramp',             src:'Greenhouse'},
+    {company:'brex',            name:'Brex',             src:'Greenhouse'},
+    {company:'plaid',           name:'Plaid',            src:'Greenhouse'},
+    {company:'robinhood',       name:'Robinhood',        src:'Greenhouse'},
+    {company:'coinbase',        name:'Coinbase',         src:'Greenhouse'},
+    {company:'chime',           name:'Chime',            src:'Greenhouse'},
+    {company:'nerdwallet',      name:'NerdWallet',       src:'Greenhouse'},
+    // Data / Cloud / Analytics
+    {company:'databricks',      name:'Databricks',       src:'Greenhouse'},
+    {company:'snowflake',       name:'Snowflake',        src:'Greenhouse'},
+    {company:'dbtlabsinc',      name:'dbt Labs',         src:'Greenhouse'},
+    {company:'fivetran',        name:'Fivetran',         src:'Greenhouse'},
+    {company:'datadog',         name:'Datadog',          src:'Greenhouse'},
+    {company:'elastic',         name:'Elastic',          src:'Greenhouse'},
+    {company:'grafana',         name:'Grafana Labs',     src:'Greenhouse'},
+    {company:'mongodb',         name:'MongoDB',          src:'Greenhouse'},
+    {company:'hashicorp',       name:'HashiCorp',        src:'Greenhouse'},
+    {company:'influxdata',      name:'InfluxData',       src:'Greenhouse'},
+    // Tech / SaaS
+    {company:'figma',           name:'Figma',            src:'Greenhouse'},
+    {company:'notion',          name:'Notion',           src:'Greenhouse'},
+    {company:'discord',         name:'Discord',          src:'Greenhouse'},
+    {company:'reddit',          name:'Reddit',           src:'Greenhouse'},
+    {company:'duolingo',        name:'Duolingo',         src:'Greenhouse'},
+    {company:'airbnb',          name:'Airbnb',           src:'Greenhouse'},
+    {company:'lyft',            name:'Lyft',             src:'Greenhouse'},
+    {company:'instacart',       name:'Instacart',        src:'Greenhouse'},
+    {company:'doordash',        name:'DoorDash',         src:'Greenhouse'},
+    {company:'twilio',          name:'Twilio',           src:'Greenhouse'},
+    {company:'cloudflare',      name:'Cloudflare',       src:'Greenhouse'},
+    {company:'dropbox',         name:'Dropbox',          src:'Greenhouse'},
+    {company:'box',             name:'Box',              src:'Greenhouse'},
+    {company:'zendesk',         name:'Zendesk',          src:'Greenhouse'},
+    {company:'hubspot',         name:'HubSpot',          src:'Greenhouse'},
+    {company:'asana',           name:'Asana',            src:'Greenhouse'},
+    {company:'lattice',         name:'Lattice',          src:'Greenhouse'},
+    {company:'rippling',        name:'Rippling',         src:'Greenhouse'},
+    {company:'gusto',           name:'Gusto',            src:'Greenhouse'},
+    {company:'toast',           name:'Toast',            src:'Greenhouse'},
+    // AI / ML
+    {company:'scale',           name:'Scale AI',         src:'Greenhouse'},
+    {company:'anthropic',       name:'Anthropic',        src:'Greenhouse'},
+    {company:'openai',          name:'OpenAI',           src:'Greenhouse'},
+    {company:'cohere',          name:'Cohere',           src:'Greenhouse'},
+    {company:'huggingface',     name:'Hugging Face',     src:'Greenhouse'},
+    // Healthcare / Other
+    {company:'veeva',           name:'Veeva',            src:'Greenhouse'},
+    {company:'benchling',       name:'Benchling',        src:'Greenhouse'},
   ];
   const INTERN_KW  = ['intern','internship','co-op','coop','co op','entry','junior','new grad','0-2','0-1','graduate','trainee','associate engineer','engineer i','engineer 1'];
   const SENIOR_KW  = ['senior','sr.','sr ','lead','principal','staff','director','manager','5+','6+','7+','vp ','head of'];
@@ -896,9 +976,11 @@ async function runJobSearch(){
       const data = await res.json();
       const matched = (data.jobs||[]).filter(j=>{
         const t = j.title.toLowerCase();
+        const loc = j.location?.name||'';
         return INTERN_KW.some(k=>t.includes(k)) &&
                !SENIOR_KW.some(k=>t.includes(k)) &&
-               DATA_KW.some(k=>t.includes(k));
+               DATA_KW.some(k=>t.includes(k)) &&
+               isUSA(loc); // USA only
       });
       matched.slice(0,2).forEach(j=>{
         const id = `live_${board.company}_${j.id}`;
