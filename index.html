@@ -1170,8 +1170,225 @@ function autoApply(id){
 }
 
 /* ── JOB CARD ── */
+/* ── PROFILE MATCH ENGINE ── */
+// Your exact skills extracted from resume for instant matching
+const MY_SKILLS = [
+  // Cloud & Data Platform
+  {k:'azure data factory',     cat:'Cloud',     display:'Azure Data Factory'},
+  {k:'azure databricks',       cat:'Cloud',     display:'Azure Databricks'},
+  {k:'databricks',             cat:'Cloud',     display:'Databricks'},
+  {k:'adls',                   cat:'Cloud',     display:'ADLS Gen2'},
+  {k:'azure synapse',          cat:'Cloud',     display:'Azure Synapse Analytics'},
+  {k:'microsoft fabric',       cat:'Cloud',     display:'Microsoft Fabric'},
+  {k:'delta lake',             cat:'Cloud',     display:'Delta Lake'},
+  {k:'azure sql',              cat:'Cloud',     display:'Azure SQL'},
+  {k:'azure devops',           cat:'DevOps',    display:'Azure DevOps'},
+  {k:'microsoft azure',        cat:'Cloud',     display:'Microsoft Azure'},
+  // Programming
+  {k:'pyspark',                cat:'Code',      display:'PySpark'},
+  {k:'spark',                  cat:'Code',      display:'Apache Spark'},
+  {k:'python',                 cat:'Code',      display:'Python'},
+  {k:'sql',                    cat:'Code',      display:'SQL'},
+  {k:'t-sql',                  cat:'Code',      display:'T-SQL'},
+  {k:'spark sql',              cat:'Code',      display:'Spark SQL'},
+  {k:'pandas',                 cat:'Code',      display:'Pandas'},
+  {k:'numpy',                  cat:'Code',      display:'NumPy'},
+  {k:'yaml',                   cat:'DevOps',    display:'YAML'},
+  {k:'shell',                  cat:'Code',      display:'Shell/Bash'},
+  // Data Engineering
+  {k:'etl',                    cat:'DE',        display:'ETL/ELT'},
+  {k:'elt',                    cat:'DE',        display:'ELT'},
+  {k:'data warehouse',         cat:'DE',        display:'Data Warehousing'},
+  {k:'data modeling',          cat:'DE',        display:'Data Modeling'},
+  {k:'dimensional model',      cat:'DE',        display:'Dimensional Modeling'},
+  {k:'star schema',            cat:'DE',        display:'Star Schema'},
+  {k:'lakehouse',              cat:'DE',        display:'Lakehouse Architecture'},
+  {k:'bronze',                 cat:'DE',        display:'Bronze/Silver/Gold'},
+  {k:'medallion',              cat:'DE',        display:'Medallion Architecture'},
+  {k:'data pipeline',          cat:'DE',        display:'Data Pipelines'},
+  {k:'data platform',          cat:'DE',        display:'Data Platform'},
+  {k:'data governance',        cat:'DE',        display:'Data Governance'},
+  {k:'data quality',           cat:'DE',        display:'Data Quality'},
+  {k:'data lineage',           cat:'DE',        display:'Data Lineage'},
+  // Streaming
+  {k:'spark structured streaming', cat:'Stream', display:'Spark Structured Streaming'},
+  {k:'streaming',              cat:'Stream',    display:'Streaming'},
+  {k:'real-time',              cat:'Stream',    display:'Real-Time Processing'},
+  {k:'event-time',             cat:'Stream',    display:'Event-Time Processing'},
+  {k:'watermark',              cat:'Stream',    display:'Watermarking'},
+  // Databases
+  {k:'postgresql',             cat:'DB',        display:'PostgreSQL'},
+  {k:'mysql',                  cat:'DB',        display:'MySQL'},
+  {k:'rest api',               cat:'DB',        display:'REST APIs'},
+  // DevOps
+  {k:'git',                    cat:'DevOps',    display:'Git'},
+  {k:'ci/cd',                  cat:'DevOps',    display:'CI/CD'},
+  {k:'pytest',                 cat:'DevOps',    display:'pytest'},
+  {k:'agile',                  cat:'DevOps',    display:'Agile/Scrum'},
+  // Cloud providers (general)
+  {k:'aws',                    cat:'Cloud',     display:'AWS'},
+  {k:'gcp',                    cat:'Cloud',     display:'GCP'},
+  {k:'snowflake',              cat:'Cloud',     display:'Snowflake'},
+  {k:'dbt',                    cat:'DE',        display:'dbt'},
+  {k:'airflow',                cat:'DE',        display:'Apache Airflow'},
+  {k:'kafka',                  cat:'Stream',    display:'Apache Kafka'},
+];
+
+function profileMatch(jobTitle, jobDesc){
+  const text = ((jobTitle||'') + ' ' + (jobDesc||'')).toLowerCase();
+  const matched = [];
+  const missing = [];
+
+  // Core high-value skills to specifically highlight
+  const CORE = ['azure databricks','pyspark','delta lake','azure data factory','spark','python','sql','etl','data pipeline','data warehouse','streaming','azure synapse','adls','git','ci/cd'];
+
+  MY_SKILLS.forEach(s=>{
+    if(text.includes(s.k)) matched.push(s);
+  });
+
+  // Flag important skills that are NOT in the JD (gaps from our side don't matter — flag what JD wants that we have/don't have)
+  // Instead: show what the JD requires that matches you, and what JD requires you might lack
+  const JD_WANTS = ['dbt','airflow','kafka','kubernetes','docker','scala','java','bigquery','redshift','terraform','looker','tableau','power bi','databricks certification','spark certification','snowflake'];
+  JD_WANTS.forEach(skill=>{
+    if(text.includes(skill) && !MY_SKILLS.find(s=>s.k===skill||s.display.toLowerCase()===skill)){
+      missing.push(skill);
+    }
+  });
+
+  // Score: % of JD's recognizable skills you have
+  const allSkillsInJD = MY_SKILLS.filter(s=>text.includes(s.k));
+  const matchPct = allSkillsInJD.length === 0 ? 70 : Math.min(99, Math.round((matched.length / Math.max(allSkillsInJD.length,1)) * 100));
+
+  // Weighted score /10
+  const coreMatches = matched.filter(s=>CORE.some(c=>s.k.includes(c)||c.includes(s.k)));
+  let score = 5;
+  if(coreMatches.length >= 5) score = 9;
+  else if(coreMatches.length >= 3) score = 8;
+  else if(coreMatches.length >= 2) score = 7;
+  else if(matched.length >= 3) score = 7;
+
+  return { matched, missing, matchPct, score, coreMatches };
+}
+
+function renderMatchBreakdown(j){
+  // Use cached match or compute
+  if(!j._match){
+    j._match = profileMatch(j.role, j.description||'');
+  }
+  const m = j._match;
+  if(!m.matched.length) return '';
+
+  const matchedHtml = m.matched.slice(0,12).map(s=>
+    `<span style="display:inline-flex;align-items:center;gap:3px;background:#e2f5ec;color:#085041;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin:2px">✓ ${esc(s.display)}</span>`
+  ).join('');
+
+  const missingHtml = m.missing.slice(0,5).map(s=>
+    `<span style="display:inline-flex;align-items:center;gap:3px;background:#fdf2d8;color:#7a5000;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin:2px">⚠ ${esc(s)}</span>`
+  ).join('');
+
+  const pctColor = m.matchPct>=70?'var(--green)':m.matchPct>=50?'var(--amber)':'var(--red)';
+  const bar = `<div style="height:4px;border-radius:2px;background:#eee;margin:6px 0 4px;overflow:hidden"><div style="width:${m.matchPct}%;height:100%;background:${pctColor};border-radius:2px;transition:.4s"></div></div>`;
+
+  return `<div style="margin-top:10px;padding:10px 12px;background:#f9f8fd;border:1px solid var(--line);border-radius:9px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-size:12px;font-weight:700;color:var(--ink2)">Profile match</span>
+      <span style="font-size:13px;font-weight:800;color:${pctColor}">${m.matchPct}%</span>
+    </div>
+    ${bar}
+    <div style="margin-top:6px;line-height:1.8">${matchedHtml}</div>
+    ${missingHtml?`<div style="margin-top:4px;line-height:1.8"><span style="font-size:11px;color:var(--muted);font-weight:600">JD also wants: </span>${missingHtml}</div>`:''}
+  </div>`;
+}
+
+/* ── AI DEEP SCORE (fetches actual JD and uses Claude to compare) ── */
+const AI_SCORES = {}; // cache by job id
+
+async function aiScoreJob(id, btn){
+  if(AI_SCORES[id]){
+    const j = S.jobs.find(x=>x.id===id)||S.apps.find(x=>x.id===id);
+    if(j){ j._match = AI_SCORES[id]; render(); return; }
+  }
+  const j = S.jobs.find(x=>x.id===id)||S.apps.find(x=>x.id===id);
+  if(!j) return;
+  btn.disabled=true; btn.textContent='Analyzing…';
+
+  const MY_RESUME = `Rajasekhar Polepalli — Data Engineer, 3+ years production experience.
+SKILLS: Azure Data Factory, Azure Databricks, PySpark, Spark SQL, Delta Lake, ADLS Gen2, Azure Synapse Analytics, Microsoft Fabric, Spark Structured Streaming, Python, SQL, T-SQL, PostgreSQL, MySQL, REST APIs, Pandas, NumPy, ETL/ELT, Lakehouse Architecture, Bronze/Silver/Gold, Dimensional Modeling, Star Schema, Azure DevOps, Git, CI/CD, pytest, YAML, Data Governance, Data Quality, Data Lineage.
+EXPERIENCE: LimeChat (Jul 2023–Jul 2024): 5M+ events/day pipelines, 40% latency cut, 99.9% SLA, Azure Databricks/PySpark/Delta Lake/ADF/Azure Synapse. GoKwik (May 2021–Jun 2023): 3M+ transactions/month, batch runtime 90→35 min, +45% query performance, ADF/Databricks/Delta Lake/Synapse.
+EDUCATION: MS Computer Science Concordia University Wisconsin (Dec 2026). OPT eligible.
+TARGET: Internship or entry-level Data Engineer roles, USA only, open to remote/hybrid/relocate.`;
+
+  try{
+    const res = await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:600,messages:[{role:"user",content:
+`Compare this candidate's resume against the job posting and return ONLY valid JSON, no other text.
+
+JOB: ${j.role} at ${j.company} (${j.loc})
+RESUME:
+${MY_RESUME}
+
+Return this exact JSON:
+{"score":8,"matchPct":75,"verdict":"2-sentence match verdict — what aligns and what to highlight","matched":["skill1","skill2","skill3","skill4","skill5"],"missing":["gap1","gap2"],"tip":"1-sentence application tip specific to this company/role"}`
+    }]})});
+    const d = await res.json();
+    let txt = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    const m = txt.match(/\{[\s\S]*\}/);
+    if(!m) throw new Error("no json");
+    const r = JSON.parse(m[0]);
+    // Convert to match format
+    j._match = {
+      matched: (r.matched||[]).map(s=>({display:s,k:s.toLowerCase()})),
+      missing: r.missing||[],
+      matchPct: r.matchPct||70,
+      score: r.score||7,
+      coreMatches: [],
+      verdict: r.verdict,
+      tip: r.tip,
+      aiPowered: true
+    };
+    j.score = r.score||j.score;
+    j.verdict = r.verdict;
+    AI_SCORES[id] = j._match;
+    render();
+  } catch(e){
+    btn.disabled=false; btn.textContent='⚡ AI Match';
+    console.error('aiScoreJob error:',e);
+  }
+}
+
+function renderMatchBreakdownAI(j){
+  if(!j._match) return renderMatchBreakdown(j);
+  const m = j._match;
+  const pctColor = m.matchPct>=70?'var(--green)':m.matchPct>=50?'var(--amber)':'var(--red)';
+  const bar = `<div style="height:4px;border-radius:2px;background:#eee;margin:6px 0 4px;overflow:hidden"><div style="width:${m.matchPct}%;height:100%;background:${pctColor};border-radius:2px;transition:.4s"></div></div>`;
+
+  const matchedHtml = (m.matched||[]).slice(0,12).map(s=>
+    `<span style="display:inline-flex;align-items:center;gap:3px;background:#e2f5ec;color:#085041;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin:2px">✓ ${esc(s.display||s)}</span>`
+  ).join('');
+  const missingHtml = (m.missing||[]).slice(0,5).map(s=>
+    `<span style="display:inline-flex;align-items:center;gap:3px;background:#fdf2d8;color:#7a5000;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin:2px">⚠ ${esc(s)}</span>`
+  ).join('');
+
+  return `<div style="margin-top:10px;padding:10px 12px;background:#f9f8fd;border:1px solid var(--line);border-radius:9px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-size:12px;font-weight:700;color:var(--ink2)">${m.aiPowered?'🤖 AI profile match':'Profile match'}</span>
+      <span style="font-size:13px;font-weight:800;color:${pctColor}">${m.matchPct}%</span>
+    </div>
+    ${bar}
+    ${m.verdict?`<div style="font-size:12.5px;color:var(--ink2);margin-bottom:6px;line-height:1.5">${esc(m.verdict)}</div>`:''}
+    <div style="margin-top:6px;line-height:1.8">${matchedHtml}</div>
+    ${missingHtml?`<div style="margin-top:4px;line-height:1.8"><span style="font-size:11px;color:var(--muted);font-weight:600">JD also wants: </span>${missingHtml}</div>`:''}
+    ${m.tip?`<div style="margin-top:6px;font-size:12px;color:#1a4db7;background:#e8f0fe;border-radius:7px;padding:6px 10px">💡 ${esc(m.tip)}</div>`:''}
+  </div>`;
+}
+
 function jobCard(j, fromFeed){
-  const col = j.score>=9?"var(--green)":j.score>=7?"var(--amber)":"var(--muted)";
+  // Compute instant profile match on every card render
+  if(!j._match) j._match = profileMatch(j.role, j.description||'');
+  // Override score with match score if better
+  const m = j._match;
+  const displayScore = Math.max(j.score||0, m.score||0);
+  const col = displayScore>=9?'var(--green)':displayScore>=7?'var(--amber)':'var(--muted)';
   const age = jobAge(j.postedAt);
   const ageBadge = age
     ? `<span style="font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;margin-left:8px;
@@ -1188,24 +1405,25 @@ function jobCard(j, fromFeed){
         <div class="jco">${esc(j.company)} · ${esc(j.loc)} · ${esc(j.pay)}</div>
       </div>
       <div class="jscore">
-        <span class="snum" style="color:${col}">${j.score}</span>
+        <span class="snum" style="color:${col}">${displayScore}</span>
         <span class="sdiv">/10</span>
       </div>
     </div>
     <div class="jmeta">
       <span class="pill pill-b">via ${esc(j.src)}</span>
-      ${j.score>=9?'<span class="pill pill-g">Auto-ready</span>':'<span class="pill pill-a">Review</span>'}
+      ${displayScore>=9?'<span class="pill pill-g">Auto-ready</span>':'<span class="pill pill-a">Review</span>'}
       ${j.applied?'<span class="pill pill-g">Applied ✓</span>':''}
       ${j.tailored?'<span class="pill pill-b">Resume tailored</span>':''}
       ${j.linkStatus===true?'<span style="font-size:11px;color:#059669;font-weight:600">🟢 Link live</span>':j.linkStatus===false?'<span style="font-size:11px;color:#dc2626;font-weight:600">🔴 Dead link</span>':''}
     </div>
     <div style="margin-top:8px">${renderVerifyBadge(j)}</div>
-    ${j.verdict?`<div class="verdict"><strong>Match:</strong> ${esc(j.verdict)}</div>`:""}
+    ${renderMatchBreakdownAI(j)}
     ${j.tailored ? renderTailoredResume(j.tailored, j.id) : ""}
     <div class="jacts">
       <button onclick="tailorJob('${j.id}',this)">${j.tailored?"Re-tailor":"✦ Tailor resume"}</button>
+      <button onclick="aiScoreJob('${j.id}',this)" style="background:#f0f4ff;border-color:#c7d2fe;color:#3730a3">⚡ AI Match</button>
       ${j.url?`<button class="apply-btn" onclick="autoApply('${j.id}')">⚡ Auto-Apply</button>`:""}
-      ${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener" style="font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--d-line);background:var(--d-surface);color:var(--d-ink2);font-weight:600;text-decoration:none;display:inline-block">Open posting ↗</a>`:""}
+      ${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener" style="font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink2);font-weight:600;text-decoration:none;display:inline-block">Open posting ↗</a>`:""}
       ${j.referral?`<button onclick="askReferral('${j.id}')" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3">✉ Ask referral</button>`:""}
       ${!j.applied&&fromFeed?`<button onclick="markApplied('${j.id}')">Mark applied</button>`:""}
       ${j.referralSent?`<span class="pill pill-b">Referral sent ✓</span>`:""}
