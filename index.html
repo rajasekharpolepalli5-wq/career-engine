@@ -1255,9 +1255,6 @@ function profileMatch(jobTitle, jobDesc){
   const matched = [];
   const missing = [];
 
-  // Core high-value skills to specifically highlight
-  const CORE = ['azure databricks','pyspark','delta lake','azure data factory','spark','python','sql','etl','data pipeline','data warehouse','streaming','azure synapse','adls','git','ci/cd'];
-
   MY_SKILLS.forEach(s=>{
     if(text.includes(s.k)) matched.push(s);
   });
@@ -1271,19 +1268,37 @@ function profileMatch(jobTitle, jobDesc){
     }
   });
 
-  // Score: % of JD's recognizable skills you have
-  const allSkillsInJD = MY_SKILLS.filter(s=>text.includes(s.k));
-  const matchPct = allSkillsInJD.length === 0 ? 70 : Math.min(99, Math.round((matched.length / Math.max(allSkillsInJD.length,1)) * 100));
+  // Score: % of YOUR core skills the JD is asking for
+  // This answers: "how much of what YOU have does THIS job want?"
+  const CORE_SKILLS = ['azure databricks','pyspark','delta lake','azure data factory','python','sql','etl','data pipeline','data warehouse','spark','streaming','azure synapse','adls','git','ci/cd','t-sql','spark sql'];
+  const coreInJD    = CORE_SKILLS.filter(s=>text.includes(s));
+  const coreMatched = matched.filter(s=>CORE_SKILLS.some(c=>s.k.includes(c)||c.includes(s.k)));
 
-  // Weighted score /10
-  const coreMatches = matched.filter(s=>CORE.some(c=>s.k.includes(c)||c.includes(s.k)));
+  // matchPct = (your matched skills / total YOUR skills that JD mentions) but weight by JD relevance
+  // If JD mentions >=5 of your skills → high relevance
+  // matchPct = matched.length / total_your_skills * scaling
+  const totalYours = MY_SKILLS.length;
+  const rawPct = Math.round((matched.length / totalYours) * 100);
+  
+  // Boost/penalise based on data-specific term presence
+  const dataTerms = ['data engineer','data engineering','data pipeline','etl','pyspark','databricks','delta lake','spark','data warehouse','analytics engineer'];
+  const dataScore = dataTerms.filter(t2=>text.includes(t2)).length;
+  
+  let matchPct;
+  if(dataScore >= 4)      matchPct = Math.min(95, Math.max(75, rawPct + 20 + dataScore*2));
+  else if(dataScore >= 2) matchPct = Math.min(75, Math.max(55, rawPct + 10));
+  else if(dataScore >= 1) matchPct = Math.min(60, Math.max(40, rawPct));
+  else                    matchPct = Math.min(45, Math.max(25, rawPct - 10)); // generic SWE role
+
+  // Score /10
   let score = 5;
-  if(coreMatches.length >= 5) score = 9;
-  else if(coreMatches.length >= 3) score = 8;
-  else if(coreMatches.length >= 2) score = 7;
-  else if(matched.length >= 3) score = 7;
+  if(dataScore >= 4 && coreMatched.length >= 4) score = 9;
+  else if(dataScore >= 4 && coreMatched.length >= 2) score = 8;
+  else if(dataScore >= 2 && coreMatched.length >= 2) score = 7;
+  else if(matched.length >= 4) score = 7;
+  else if(matched.length >= 2) score = 6;
 
-  return { matched, missing, matchPct, score, coreMatches };
+  return { matched, missing, matchPct, score, coreMatches: coreMatched };
 }
 
 function renderMatchBreakdown(j){
