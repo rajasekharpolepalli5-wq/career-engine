@@ -830,13 +830,6 @@ function renderHunter(){
   ${sorted.filter(j=>S.showFailed||verifyJob(j).passed).map(j=>jobCard(j, true)).join("")}`;
 }
 
-async function runJobSearch(){
-  S.searching = true;
-  S.searched = true;
-  S.searchProgress = 5;
-  S.searchStatus = 'Fetching live jobs from Greenhouse & Lever…';
-  S.lastRefresh = Date.now();
-  render();
 
 
 /* ── LIVE LINK VERIFIER ── */
