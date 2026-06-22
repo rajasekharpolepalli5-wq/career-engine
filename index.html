@@ -76,18 +76,23 @@ textarea{resize:vertical;line-height:1.6}
 .resume-wrap{margin-top:14px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .resume-toolbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f3f2f8;border-bottom:1px solid var(--line)}
 .resume-toolbar span{font-size:12px;font-weight:700;color:var(--muted)}
-.resume-body{padding:28px 32px;background:#fff;font-family:'Times New Roman',Times,serif;font-size:11pt;line-height:1.4;color:#000}
-.resume-body .rname{text-align:center;font-size:14pt;font-weight:700;letter-spacing:.05em;margin-bottom:4px}
-.resume-body .rcontact{text-align:center;font-size:10pt;margin-bottom:10px;color:#222}
-.resume-body hr{border:0;border-top:1.5px solid #000;margin:6px 0}
-.resume-body .rsec{font-size:11pt;font-weight:700;letter-spacing:.04em;margin-top:10px;margin-bottom:2px}
-.resume-body .rskill-row{margin-bottom:3px;font-size:10.5pt}
+.resume-body{padding:32px 40px;background:#fff;font-family:'Times New Roman',Times,serif;font-size:11pt;line-height:1.45;color:#000;max-width:800px;margin:0 auto}
+.resume-body .rname{text-align:center;font-size:15pt;font-weight:700;letter-spacing:.06em;margin-bottom:5px;text-transform:uppercase}
+.resume-body .rcontact{text-align:center;font-size:10pt;margin-bottom:4px;color:#222;line-height:1.6}
+.resume-body .rcontact a{color:#1155cc;text-decoration:underline}
+.resume-body .rcontact a:hover{color:#0b3d91}
+.resume-body .ropen{text-align:center;font-size:9.5pt;color:#555;margin-bottom:10px;font-style:italic}
+.resume-body hr{border:0;border-top:1.5px solid #000;margin:5px 0 6px}
+.resume-body .rsec{font-size:11pt;font-weight:700;letter-spacing:.06em;margin-top:12px;margin-bottom:1px;text-transform:uppercase}
+.resume-body .rskill-row{margin-bottom:4px;font-size:10.5pt;line-height:1.45}
 .resume-body .rskill-row b{font-weight:700}
-.resume-body .rjob-head{display:flex;justify-content:space-between;font-weight:700;font-size:11pt;margin-top:8px}
-.resume-body .rjob-stack{font-size:10pt;color:#333;margin:2px 0 4px;font-style:italic}
-.resume-body ul{margin:0;padding-left:18px}
-.resume-body ul li{font-size:10.5pt;margin-bottom:3px;line-height:1.45}
-.resume-body .redu-row{display:flex;justify-content:space-between;font-size:10.5pt;margin-bottom:2px}
+.resume-body .rjob-head{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:11pt;margin-top:10px;margin-bottom:1px}
+.resume-body .rjob-stack{font-size:10pt;color:#333;margin:2px 0 5px;font-style:italic;line-height:1.4}
+.resume-body ul{margin:2px 0 0;padding-left:20px}
+.resume-body ul li{font-size:10.5pt;margin-bottom:4px;line-height:1.45}
+.resume-body p.rsummary{font-size:10.5pt;margin:5px 0 10px;line-height:1.5}
+.resume-body .redu-row{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5pt;margin-bottom:4px}
+.resume-body .redu-row span:first-child{flex:1}
 
 /* ── PORTFOLIO ── */
 #pf-root{background:#0a0912;color:#f4f2ff;min-height:100vh;overflow-x:hidden}
@@ -1638,16 +1643,18 @@ function renderTailoredResume(t, jobId){
   <div class="resume-body" id="${resumeId}-body">
     <div class="rname">RAJASEKHAR POLEPALLI</div>
     <div class="rcontact">
-      Wauwatosa, WI &nbsp;|&nbsp;
-      <a href="tel:+14144364320" style="color:#000;text-decoration:none">+1 (414) 436-4320</a> &nbsp;|&nbsp;
-      <a href="mailto:rajasekhar.polepalli5@gmail.com" style="color:#000;text-decoration:none">rajasekhar.polepalli5@gmail.com</a> &nbsp;|&nbsp;
-      <a href="https://linkedin.com/in/rajasekharpolepalli-0806793a3" target="_blank" style="color:#000;text-decoration:none">linkedin.com/in/rajasekharpolepalli</a> &nbsp;|&nbsp;
-      <a href="https://rajasekhar-polepalli.vercel.app" target="_blank" style="color:#000;text-decoration:none">rajasekhar-polepalli.vercel.app</a>
+      Wauwatosa, WI &nbsp;·&nbsp; Open to Remote / Hybrid / Relocate
+    </div>
+    <div class="rcontact">
+      <a href="tel:+14144364320">+1 (414) 436-4320</a> &nbsp;|&nbsp;
+      <a href="mailto:rajasekhar.polepalli5@gmail.com">rajasekhar.polepalli5@gmail.com</a> &nbsp;|&nbsp;
+      <a href="https://rajasekhar-polepalli.vercel.app" target="_blank">Portfolio</a> &nbsp;|&nbsp;
+      <a href="https://linkedin.com/in/rajasekharpolepalli-0806793a3" target="_blank">LinkedIn</a>
     </div>
     <hr>
     <div class="rsec">SUMMARY</div>
     <hr>
-    <p style="font-size:10.5pt;margin:4px 0 8px">${esc(t.summary||ME.summary)}</p>
+    <p class="rsummary">${esc(t.summary||ME.summary)}</p>
     <div class="rsec">TECHNICAL SKILLS</div>
     <hr>
     ${skillsHtml}
@@ -1676,20 +1683,20 @@ function downloadResumePDF(resumeId){
     <title>Rajasekhar Polepalli Resume</title>
     <style>
       *{box-sizing:border-box}
-      body{font-family:'Times New Roman',Times,serif;font-size:11pt;line-height:1.4;color:#000;margin:0;padding:24px 36px}
-      .rname{text-align:center;font-size:14pt;font-weight:700;letter-spacing:.05em;margin-bottom:4px}
-      .rcontact{text-align:center;font-size:10pt;margin-bottom:8px}
-      .rcontact a{color:#000;text-decoration:none}
-      hr{border:0;border-top:1.5px solid #000;margin:5px 0}
-      .rsec{font-size:11pt;font-weight:700;letter-spacing:.04em;margin-top:10px;margin-bottom:2px}
-      .rskill-row{margin-bottom:2px;font-size:10.5pt}
-      .rjob-head{display:flex;justify-content:space-between;font-weight:700;font-size:11pt;margin-top:8px}
-      .rjob-stack{font-size:10pt;color:#333;margin:2px 0 4px;font-style:italic}
-      ul{margin:0;padding-left:18px}
-      li{font-size:10.5pt;margin-bottom:3px;line-height:1.45}
-      .redu-row{display:flex;justify-content:space-between;font-size:10.5pt;margin-bottom:2px}
-      p{margin:4px 0 8px;font-size:10.5pt}
-      @media print{body{padding:12px 20px}}
+      body{font-family:'Times New Roman',Times,serif;font-size:11pt;line-height:1.45;color:#000;margin:0;padding:24px 40px}
+      .rname{text-align:center;font-size:15pt;font-weight:700;letter-spacing:.06em;margin-bottom:5px;text-transform:uppercase}
+      .rcontact{text-align:center;font-size:10pt;margin-bottom:4px;line-height:1.6}
+      .rcontact a{color:#1155cc;text-decoration:underline}
+      hr{border:0;border-top:1.5px solid #000;margin:5px 0 6px}
+      .rsec{font-size:11pt;font-weight:700;letter-spacing:.06em;margin-top:12px;margin-bottom:1px;text-transform:uppercase}
+      .rskill-row{margin-bottom:4px;font-size:10.5pt;line-height:1.45}
+      .rjob-head{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:11pt;margin-top:10px;margin-bottom:1px}
+      .rjob-stack{font-size:10pt;color:#333;margin:2px 0 5px;font-style:italic}
+      ul{margin:2px 0 0;padding-left:20px}
+      li{font-size:10.5pt;margin-bottom:4px;line-height:1.45}
+      p.rsummary{font-size:10.5pt;margin:5px 0 10px;line-height:1.5}
+      .redu-row{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5pt;margin-bottom:4px}
+      @media print{body{padding:12px 28px}}
     </style>
   </head><body>${body.innerHTML}</body></html>`);
   win.document.close();
@@ -1708,19 +1715,19 @@ function downloadResumeWord(resumeId){
     <title>Rajasekhar Polepalli Resume</title>
     <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
     <style>
-      body{font-family:"Times New Roman",Times,serif;font-size:11pt;line-height:1.4;color:#000;margin:1in}
-      .rname{text-align:center;font-size:14pt;font-weight:bold;letter-spacing:.05em;margin-bottom:4pt}
-      .rcontact{text-align:center;font-size:10pt;margin-bottom:8pt}
-      .rcontact a{color:#000;text-decoration:none}
-      hr{border:0;border-top:1.5pt solid #000;margin:5pt 0}
-      .rsec{font-size:11pt;font-weight:bold;letter-spacing:.04em;margin-top:10pt;margin-bottom:2pt}
-      .rskill-row{margin-bottom:2pt;font-size:10.5pt}
-      .rjob-head{font-weight:bold;font-size:11pt;margin-top:8pt}
-      .rjob-stack{font-size:10pt;color:#333;margin:2pt 0 4pt;font-style:italic}
-      ul{margin:0;padding-left:18pt}
-      li{font-size:10.5pt;margin-bottom:3pt;line-height:1.45}
-      .redu-row{font-size:10.5pt;margin-bottom:2pt}
-      p{margin:4pt 0 8pt;font-size:10.5pt}
+      body{font-family:"Times New Roman",Times,serif;font-size:11pt;line-height:1.45;color:#000;margin:1in}
+      .rname{text-align:center;font-size:15pt;font-weight:bold;letter-spacing:.06em;margin-bottom:5pt;text-transform:uppercase}
+      .rcontact{text-align:center;font-size:10pt;margin-bottom:4pt;line-height:1.6}
+      .rcontact a{color:#1155cc;text-decoration:underline}
+      hr{border:0;border-top:1.5pt solid #000;margin:5pt 0 6pt}
+      .rsec{font-size:11pt;font-weight:bold;letter-spacing:.06em;margin-top:12pt;margin-bottom:1pt;text-transform:uppercase}
+      .rskill-row{margin-bottom:4pt;font-size:10.5pt;line-height:1.45}
+      .rjob-head{font-weight:bold;font-size:11pt;margin-top:10pt;margin-bottom:1pt}
+      .rjob-stack{font-size:10pt;color:#333;margin:2pt 0 5pt;font-style:italic}
+      ul{margin:2pt 0 0;padding-left:20pt}
+      li{font-size:10.5pt;margin-bottom:4pt;line-height:1.45}
+      p.rsummary{font-size:10.5pt;margin:5pt 0 10pt;line-height:1.5}
+      .redu-row{font-size:10.5pt;margin-bottom:4pt}
     </style>
   </head><body>${body.innerHTML}</body></html>`;
 
