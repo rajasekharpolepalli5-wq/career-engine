@@ -968,39 +968,102 @@ async function runJobSearch(){
     {company:'veeva',           name:'Veeva',            src:'Greenhouse'},
     {company:'benchling',       name:'Benchling',        src:'Greenhouse'},
   ];
-  const INTERN_KW  = ['intern','internship','co-op','coop','co op','entry level','junior','new grad','0-2 year','0-1 year','graduate engineer','trainee','new graduate'];
-  const SENIOR_KW  = ['senior','sr.','sr ','lead','principal','staff','director','manager','5+','6+','7+','vp ','head of','distinguished','phd','iii','iv',' ii ',' ii,'];
-  // STRICT: title must contain an explicit data-engineering phrase — not just "engineer" or "data"
-  const DATA_TITLE_KW = [
-    'data engineer','data engineering','data pipeline','data platform',
-    'data infrastructure','data warehouse','analytics engineer','analytics engineering',
-    'etl engineer','etl developer','data ops','dataops','data operations',
-    'data integration','spark engineer','lakehouse','lake engineer',
-    'bi engineer','business intelligence engineer','ml engineer','mlops',
-    'machine learning engineer','ai engineer','cloud data','azure data',
-    'aws data','gcp data','database engineer','sql engineer'
+  // ── YOUR CORE SKILLS for JD matching ──
+  const MY_CORE = [
+    'azure databricks','databricks','pyspark','delta lake','azure data factory',
+    'adls','azure synapse','microsoft fabric','spark structured streaming',
+    'spark sql','data pipeline','etl','elt','data warehouse','lakehouse',
+    'bronze silver gold','medallion','data modeling','dimensional model',
+    'star schema','data platform','data infrastructure','data engineer',
+    'analytics engineer','python','sql','t-sql','postgresql','mysql',
+    'ci/cd','azure devops','git','data governance','data quality','streaming',
+    'real-time','dbt','airflow','kafka','snowflake','bigquery'
   ];
 
-  // Score each job 1-10 based on how well it matches Rajasekhar's profile
-  function scoreJob(title){
-    const t = title.toLowerCase();
-    let score = 7; // base
-    if(t.includes('data engineer')) score = 10;
-    else if(t.includes('data engineering')) score = 10;
-    else if(t.includes('analytics engineer')) score = 9;
-    else if(t.includes('etl')) score = 9;
-    else if(t.includes('data platform') || t.includes('data pipeline')) score = 9;
-    else if(t.includes('data infrastructure') || t.includes('data warehouse')) score = 8;
-    else if(t.includes('ml engineer') || t.includes('machine learning engineer')) score = 8;
-    else if(t.includes('cloud data') || t.includes('azure data')) score = 9;
-    if(t.includes('intern') || t.includes('co-op')) score = Math.min(score, 9);
-    return score;
+  // Block JDs that require clearly too much exp or wrong role
+  const EXP_BLOCK  = ['10+ years','8+ years','7+ years','6+ years','5+ years',
+                       '5 years of experience','6 years','7 years','8 years','10 years'];
+  const ROLE_BLOCK = ['data scientist','machine learning scientist','research scientist',
+                      'frontend engineer','backend engineer','mobile engineer',
+                      'ios engineer','android developer','security engineer',
+                      'qa engineer','test engineer','product manager',
+                      'program manager','devops engineer','site reliability',
+                      'recruiter','sales','marketing'];
+
+  // Score JD content against your profile (0-100)
+  function scoreJD(title, desc){
+    const t = (title||'').toLowerCase();
+    const d = (desc||'').toLowerCase();
+    const full = t + ' ' + d;
+
+    // Hard block — wrong role type
+    if(ROLE_BLOCK.some(r=>t.includes(r))) return 0;
+    // Hard block — too much experience required
+    if(EXP_BLOCK.some(e=>d.includes(e))) return 0;
+
+    // Must mention "data" and some engineering in the JD
+    const hasDataEng = full.includes('data engineer') || full.includes('data engineering') ||
+                       full.includes('analytics engineer') || full.includes('data pipeline') ||
+                       full.includes('data platform') || full.includes('etl') ||
+                       full.includes('elt') || full.includes('data warehouse') ||
+                       full.includes('lakehouse') || full.includes('pyspark') ||
+                       full.includes('databricks') || full.includes('spark') ||
+                       full.includes('delta lake');
+    if(!hasDataEng) return 0;
+
+    // Score by how many of YOUR skills the JD mentions
+    const hits = MY_CORE.filter(s=>full.includes(s)).length;
+    // Max hits is MY_CORE.length, scale to 100
+    const score = Math.round((hits / MY_CORE.length) * 100);
+    return Math.min(99, score);
+  }
+
+  // Fetch full JD and score it — returns {live, score, description, title}
+  async function fetchAndScoreJob(url, title){
+    try {
+      if(url.includes('greenhouse.io')){
+        const match = url.match(/greenhouse\.io\/([^\/\?]+)\/jobs\/(\d+)/);
+        if(match){
+          const [,board,jobId] = match;
+          const res = await fetch(
+            `https://boards-api.greenhouse.io/v1/boards/${board}/jobs/${jobId}?questions=true`,
+            {signal: AbortSignal.timeout(6000)}
+          );
+          if(!res.ok) return {live:false, score:0};
+          const data = await res.json();
+          if(!data.title) return {live:false, score:0};
+          const desc = (data.content||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+          const score = scoreJD(data.title, desc);
+          return {live:true, score, description:desc, title:data.title};
+        }
+      }
+      if(url.includes('jobs.lever.co')){
+        const match = url.match(/jobs\.lever\.co\/([^\/]+)\/([a-f0-9-]{36})/i);
+        if(match){
+          const [,company,jobId] = match;
+          const res = await fetch(
+            `https://api.lever.co/v0/postings/${company}/${jobId}`,
+            {signal: AbortSignal.timeout(6000)}
+          );
+          if(!res.ok) return {live:false, score:0};
+          const data = await res.json();
+          const desc = [data.descriptionPlain||'',(data.lists||[]).map(l=>l.content||'').join(' '),data.additionalPlain||''].join(' ');
+          const score = scoreJD(data.text||title, desc);
+          return {live:true, score, description:desc, title:data.text};
+        }
+      }
+      return {live:true, score:0};
+    } catch(e){
+      return {live:false, score:0};
+    }
   }
 
   let liveCount = 0;
+  const candidateJobs = []; // collect before scoring
+
   for(let i=0; i<LIVE_BOARDS.length; i++){
     const board = LIVE_BOARDS[i];
-    S.searchProgress = 5 + Math.floor(i/LIVE_BOARDS.length * 35);
+    S.searchProgress = 3 + Math.floor(i/LIVE_BOARDS.length * 30);
     S.searchStatus = `Scanning ${board.name} (${i+1}/${LIVE_BOARDS.length})…`;
     render();
     try {
@@ -1008,33 +1071,57 @@ async function runJobSearch(){
         {signal: AbortSignal.timeout(5000)});
       if(!res.ok) continue;
       const data = await res.json();
-      const matched = (data.jobs||[]).filter(j=>{
-        const t = j.title.toLowerCase();
-        const loc = j.location?.name||'';
-        // Must have intern/entry qualifier AND a strict data engineering title term
-        const hasIntern  = INTERN_KW.some(k=>t.includes(k));
-        const hasSenior  = SENIOR_KW.some(k=>t.includes(k));
-        const isDataRole = DATA_TITLE_KW.some(k=>t.includes(k));
-        return hasIntern && !hasSenior && isDataRole && isUSA(loc);
-      });
-      matched.slice(0,3).forEach(j=>{
+      // Take all jobs — filter by JD content, not title
+      (data.jobs||[]).forEach(j=>{
         const id = `live_${board.company}_${j.id}`;
-        if(!freshJobs.find(x=>x.id===id)){
-          freshJobs.unshift({
+        if(!freshJobs.find(x=>x.id===id) && !candidateJobs.find(x=>x.id===id)){
+          candidateJobs.push({
             id, role:j.title, company:board.name,
             loc: j.location?.name||'Remote',
             pay:'See posting', src:board.src, board:board.src,
-            score: scoreJob(j.title),
-            url: j.absolute_url,
+            score:0, url:j.absolute_url,
             referral:`careers@${board.company.toLowerCase()}.com`,
             applied:false, tailored:null, linkStatus:null,
             postedAt: j.updated_at ? new Date(j.updated_at).getTime() : Date.now()
           });
-          liveCount++;
         }
       });
     } catch(e){}
   }
+
+  // ── STEP 2: Fetch JD + score against YOUR profile in batches ──
+  S.searchProgress = 35;
+  S.searchStatus = `Fetching ${candidateJobs.length} JDs and scoring against your profile…`;
+  render();
+
+  const scoredJobs = [];
+  for(let i=0; i<candidateJobs.length; i+=5){
+    const batch = candidateJobs.slice(i, i+5);
+    await Promise.allSettled(batch.map(async j=>{
+      // Only fetch JD for USA jobs (skip non-USA quickly)
+      if(!isUSA(j.loc)) return;
+      const result = await fetchAndScoreJob(j.url, j.role);
+      if(!result.live) return; // dead link
+      j.linkStatus = true;
+      if(result.description) j.description = result.description;
+      if(result.title) j.role = result.title; // use actual JD title
+      const jdScore = result.score;
+      if(jdScore > 0){ // JD matches your profile
+        j.score = Math.round(jdScore / 10); // 0-100 → 0-10
+        j._match = profileMatch(j.role, j.description||'');
+        // Override score with profile match score
+        j.score = j._match.score;
+        scoredJobs.push(j);
+      }
+    }));
+    S.searchProgress = 35 + Math.floor((i/candidateJobs.length)*55);
+    S.searchStatus = `Scored ${Math.min(i+5,candidateJobs.length)}/${candidateJobs.length} JDs — ${scoredJobs.length} matches so far…`;
+    render();
+  }
+
+  // Sort by match score descending, take top results
+  scoredJobs.sort((a,b)=>(b._match?.matchPct||0)-(a._match?.matchPct||0));
+  const topMatches = scoredJobs.slice(0, 20); // show top 20 matches
 
   // ── STEP 2: Verify every link — also fetches full JD for profile matching ──
   S.searchProgress = 45;
@@ -1069,12 +1156,27 @@ async function runJobSearch(){
     render();
   }
 
-  // ── STEP 3: Filter — only keep jobs with live links ──
-  const liveJobs = freshJobs.filter(j => j.linkStatus !== false);
-  const deadCount = freshJobs.filter(j => j.linkStatus === false).length;
+  // ── STEP 3: Merge with seed jobs, filter dead links, sort by match ──
+  const allJobs = [...freshJobs, ...topMatches];
+  // Deduplicate by id
+  const seen = new Set();
+  const deduped = allJobs.filter(j=>{ if(seen.has(j.id)) return false; seen.add(j.id); return true; });
+  
+  // For seed jobs that didn't go through JD fetch, verify them now
+  const unseenSeeds = deduped.filter(j=>j.linkStatus===null);
+  await Promise.allSettled(unseenSeeds.map(async j=>{
+    const result = await fetchAndScoreJob(j.url, j.role);
+    j.linkStatus = result.live;
+    if(result.description){ j.description = result.description; j._match = profileMatch(j.role, j.description); j.score = j._match?.score||j.score; }
+  }));
 
-  S.searchProgress = 95;
-  S.searchStatus = `✅ ${liveJobs.length} live jobs · ❌ ${deadCount} dead links removed automatically`;
+  const liveJobs  = deduped.filter(j=>j.linkStatus !== false);
+  const deadCount = deduped.filter(j=>j.linkStatus === false).length;
+  // Sort: highest profile match first
+  liveJobs.sort((a,b)=>(b._match?.matchPct||0)-(a._match?.matchPct||0));
+
+  S.searchProgress = 98;
+  S.searchStatus = `✅ ${liveJobs.length} jobs matched your profile · ❌ ${deadCount} dead/irrelevant removed`;
   render();
   await new Promise(r=>setTimeout(r,600));
 
@@ -1416,9 +1518,14 @@ function renderMatchBreakdownAI(j){
 function jobCard(j, fromFeed){
   // Compute instant profile match on every card render
   if(!j._match) j._match = profileMatch(j.role, j.description||'');
-  // Override score with match score if better
   const m = j._match;
-  const displayScore = Math.max(j.score||0, m.score||0);
+
+  // Display score = AI match score if available, else profile match score, else title score
+  // This fixes: "25% match but showing 9/10"
+  const displayScore = m.aiPowered ? m.score :
+                       (m.matchPct >= 75 ? Math.max(j.score||0, m.score||0) :
+                        m.matchPct >= 50 ? Math.min(j.score||0, Math.max(m.score||0, 6)) :
+                        Math.min(m.score||5, 5)); // low match → cap at 5/10
   const col = displayScore>=9?'var(--green)':displayScore>=7?'var(--amber)':'var(--muted)';
   const age = jobAge(j.postedAt);
   const ageBadge = age
