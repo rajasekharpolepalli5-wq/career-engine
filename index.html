@@ -1071,8 +1071,26 @@ async function runJobSearch(){
         {signal: AbortSignal.timeout(5000)});
       if(!res.ok) continue;
       const data = await res.json();
-      // Take all jobs — filter by JD content, not title
+      // Smart pre-filter: keep jobs where title hints at data/engineering
+      // This narrows 7000+ jobs to ~300 candidates before expensive JD fetches
+      const DATA_HINTS = ['data','engineer','analyst','pipeline','etl','spark','sql',
+                          'analytics','platform','warehouse','bi ','intelligence',
+                          'ml','machine learn','cloud','azure','aws','gcp','databricks',
+                          'lakehouse','database','integration','backend','software'];
+      const HARD_SKIP  = ['sales','marketing','recruiter','hr ','human resource',
+                          'legal','finance','account','design','ux','ui ','product manager',
+                          'program manager','customer success','support','counsel',
+                          'physical','mechanical','hardware','electrical','chemical',
+                          'ios','android','mobile','react native'];
       (data.jobs||[]).forEach(j=>{
+        const t = j.title.toLowerCase();
+        const loc = j.location?.name||'';
+        // Hard skip obviously wrong roles
+        if(HARD_SKIP.some(k=>t.includes(k))) return;
+        // Must have at least one data/engineering hint in title
+        if(!DATA_HINTS.some(k=>t.includes(k))) return;
+        // USA only
+        if(!isUSA(loc)) return;
         const id = `live_${board.company}_${j.id}`;
         if(!freshJobs.find(x=>x.id===id) && !candidateJobs.find(x=>x.id===id)){
           candidateJobs.push({
