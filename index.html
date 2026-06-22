@@ -967,15 +967,16 @@ async function runJobSearch(){
   function isUSA(loc){
     if(!loc || loc.trim()==='') return true; // blank = assume remote/USA
     const l = (' '+loc+' ').toLowerCase();
-    // Remote always passes
-    if(l.includes('remote')) return true;
-    // Hard foreign exclusion
+    // Remote passes UNLESS explicitly "remote canada/uk/etc"
+    if(l.includes('remote') && !FOREIGN.some(f=>l.includes(f))) return true;
+    // Hard foreign exclusion (includes canada)
     if(FOREIGN.some(f=>l.includes(f))) return false;
-    // Positive US match
+    // Positive US match required
     if(USA_STATES.some(s=>l.includes(s))) return true;
-    // If not clearly foreign and not clearly US - pass it (could be "Anywhere", "Worldwide", etc.)
-    // Only reject if FOREIGN matched above
-    return true;
+    // "Anywhere", "Worldwide", "Global" - pass through
+    if(l.includes('anywhere')||l.includes('worldwide')||l.includes('global')||l.includes('us only')||l.includes('united states')) return true;
+    // Unknown location - exclude (safer to miss than show non-USA)
+    return false;
   }
 
   // ── ALL 0-2yr / entry-level title keywords ──
@@ -1011,7 +1012,7 @@ async function runJobSearch(){
 
   // Block these in the TITLE (seniority / wrong field)
   const TITLE_BLOCK = [
-    'senior','sr.','sr ','principal','lead ','manager','director',
+    'senior','sr.','sr ','staff ','staff,','principal','lead ','manager','director',
     'head of','vp ','vice president','architect','scientist','ml engineer',
     'machine learning','research engineer','research scientist','frontend',
     'backend','fullstack','full stack','full-stack','mobile','ios ','android',
@@ -1180,31 +1181,27 @@ async function runJobSearch(){
   ];
 
   const LEVER_BOARDS = [
-    // Data / Cloud
-    {slug:'hex-technologies', name:'Hex'},
-    {slug:'metabase',         name:'Metabase'},
-    {slug:'prefecthq',        name:'Prefect'},
-    {slug:'monte-carlo-data', name:'Monte Carlo'},
-    {slug:'singlestore',      name:'SingleStore'},
-    {slug:'alluxio',          name:'Alluxio'},
-    {slug:'whylabs',          name:'WhyLabs'},
-    {slug:'gretel-ai',        name:'Gretel AI'},
-    // Tech
-    {slug:'netlify',          name:'Netlify'},
-    {slug:'replit',           name:'Replit'},
-    {slug:'zapier',           name:'Zapier'},
-    {slug:'airtable',         name:'Airtable'},
-    {slug:'retool',           name:'Retool'},
-    {slug:'vercel',           name:'Vercel'},
-    {slug:'linear',           name:'Linear'},
-    {slug:'loom',             name:'Loom'},
-    {slug:'miro',             name:'Miro'},
-    // Fintech / Other
-    {slug:'watershed',        name:'Watershed'},
-    {slug:'humane',           name:'Humane'},
-    {slug:'weights-biases',   name:'Weights & Biases'},
-    {slug:'deepmind',         name:'DeepMind'},
-    {slug:'neon',             name:'Neon'},
+    // Verified active Lever boards (checked June 2026)
+    {slug:'netlify',           name:'Netlify'},
+    {slug:'zapier',            name:'Zapier'},
+    {slug:'airtable',          name:'Airtable'},
+    {slug:'miro',              name:'Miro'},
+    {slug:'watershed',         name:'Watershed'},
+    {slug:'wandb',             name:'Weights & Biases'},
+    {slug:'canonical',         name:'Canonical'},
+    {slug:'neon',              name:'Neon'},
+    {slug:'coreweave',         name:'CoreWeave'},
+    {slug:'labelbox',          name:'Labelbox'},
+    {slug:'astronomer',        name:'Astronomer'},
+    {slug:'thoughtspot',       name:'ThoughtSpot'},
+    {slug:'rockset',           name:'Rockset'},
+    {slug:'imply',             name:'Imply'},
+    {slug:'starburst',         name:'Starburst'},
+    {slug:'dremio',            name:'Dremio'},
+    {slug:'getcensus',         name:'Census'},
+    {slug:'hightouch',         name:'Hightouch'},
+    {slug:'rudderstack',       name:'RudderStack'},
+    {slug:'ContextLogic',      name:'Wish'},
   ];
 
   const ASHBY_BOARDS = [
@@ -1236,9 +1233,13 @@ async function runJobSearch(){
   const seenIds = new Set();
 
   // Helper to add a candidate job (dedup by url)
+  const MAX_AGE_DAYS = 60;
+  const MAX_AGE_MS = MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
   function addCandidate(job){
     const key = job.url;
     if(seenIds.has(key)) return;
+    // Skip jobs older than 60 days
+    if(job.postedAt && (Date.now() - job.postedAt) > MAX_AGE_MS) return;
     seenIds.add(key);
     allCandidates.push({
       ...job,
