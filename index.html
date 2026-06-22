@@ -918,45 +918,96 @@ async function runJobSearch(){
   S.jobs.forEach(j=>{ prevJobs[j.id]={applied:j.applied,tailored:j.tailored}; });
 
   // ── USA location check ──
-  const USA_STATES = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia',
-    'ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc',
-    'nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy','dc',
-    'remote','united states','usa','u.s.','new york','los angeles','san francisco','chicago',
-    'seattle','boston','austin','denver','atlanta','miami'];
+  const USA_STATES = [
+    // State abbreviations (must match as word boundaries via ', ' or end)
+    ', al',' al,',', ak',' ak,',', az',' az,',', ar',' ar,',', ca',' ca,',
+    ', co',' co,',', ct',' ct,',', de',' de,',', fl',' fl,',', ga',' ga,',
+    ', hi',' hi,',', id',' id,',', il',' il,',', in',' in,',', ia',' ia,',
+    ', ks',' ks,',', ky',' ky,',', la',' la,',', me',' me,',', md',' md,',
+    ', ma',' ma,',', mi',' mi,',', mn',' mn,',', ms',' ms,',', mo',' mo,',
+    ', mt',' mt,',', ne',' ne,',', nv',' nv,',', nh',' nh,',', nj',' nj,',
+    ', nm',' nm,',', ny',' ny,',', nc',' nc,',', nd',' nd,',', oh',' oh,',
+    ', ok',' ok,',', or',' or,',', pa',' pa,',', ri',' ri,',', sc',' sc,',
+    ', sd',' sd,',', tn',' tn,',', tx',' tx,',', ut',' ut,',', vt',' vt,',
+    ', va',' va,',', wa',' wa,',', wv',' wv,',', wi',' wi,',', wy',' wy,',
+    ', dc',' dc,',
+    // Full state names
+    'california','new york','texas','florida','washington','illinois','colorado',
+    'georgia','massachusetts','virginia','north carolina','ohio','michigan',
+    'arizona','minnesota','tennessee','oregon','nevada','utah','maryland',
+    'wisconsin','indiana','missouri','connecticut','new jersey','pennsylvania',
+    // Major US cities
+    'san francisco','new york','new york city','nyc','los angeles','la, ca',
+    'seattle','chicago','boston','austin','denver','atlanta','miami',
+    'san jose','san diego','portland','phoenix','dallas','houston','raleigh',
+    'charlotte','nashville','pittsburgh','philadelphia','minneapolis',
+    'salt lake city','st. louis','kansas city','detroit','baltimore',
+    'washington d.c.','washington, dc','san antonio','tampa','orlando',
+    // USA indicators
+    'united states','usa','u.s.','u.s.a.','us only','us-based'
+  ];
+  const FOREIGN = [
+    'canada','ontario','british columbia','toronto','vancouver','montreal','calgary',
+    'uk','united kingdom','england','london','manchester','edinburgh','glasgow',
+    'ireland','dublin','cork','germany','berlin','munich','hamburg','frankfurt',
+    'netherlands','amsterdam','rotterdam','sweden','stockholm','france','paris',
+    'lyon','spain','madrid','barcelona','italy','milan','rome','switzerland',
+    'zurich','geneva','bern','india','bangalore','bengaluru','mumbai','delhi',
+    'hyderabad','chennai','pune','kolkata','australia','sydney','melbourne',
+    'brisbane','singapore','japan','tokyo','china','beijing','shanghai',
+    'korea','seoul','brazil','sao paulo','mexico','mexico city','poland',
+    'warsaw','krakow','israel','tel aviv','ukraine','kyiv','portugal','lisbon',
+    'norway','oslo','denmark','copenhagen','finland','helsinki','austria','vienna',
+    'hong kong','taiwan','taipei','new zealand','auckland','argentina',
+    'colombia','bogota','chile','santiago','egypt','cairo','south africa',
+    'johannesburg','nigeria','lagos','kenya','nairobi','philippines','manila',
+    'indonesia','jakarta','malaysia','kuala lumpur','thailand','bangkok',
+    'vietnam','ho chi minh','pakistan','lahore','karachi','bangladesh'
+  ];
   function isUSA(loc){
-    if(!loc) return true;
-    const l = loc.toLowerCase();
+    if(!loc || loc.trim()==='') return true; // blank = assume remote/USA
+    const l = (' '+loc+' ').toLowerCase();
     if(l.includes('remote')) return true;
-    const foreign = ['canada','uk','london','dublin','toronto','berlin','amsterdam','singapore',
-      'india','bangalore','sydney','australia','germany','france','japan','brazil','mexico',
-      'china','korea','netherlands','sweden','ireland','poland','spain','italy','paris',
-      'munich','zurich','switzerland','hong kong','taiwan'];
-    if(foreign.some(f=>l.includes(f))) return false;
-    if(USA_STATES.some(s=>l.includes(s))) return true;
-    // If no foreign match and no US match, include (could be remote)
-    return true;
+    // Hard foreign exclusion first
+    if(FOREIGN.some(f=>l.includes(f))) return false;
+    // Must positively match a US location
+    return USA_STATES.some(s=>l.includes(s));
   }
 
   // ── ALL 0-2yr / entry-level title keywords ──
   // A job TITLE must contain at least one DE_TITLE keyword
   // AND must NOT contain any SENIOR_BLOCK keyword
   const DE_TITLE_KEYWORDS = [
+    // Core data engineering titles
     'data engineer','data engineering','analytics engineer','etl engineer',
-    'data pipeline','platform engineer','data platform','data infrastructure',
-    'database engineer','data integration','bi engineer','data warehouse engineer',
-    'warehouse engineer','lakehouse','spark engineer','cloud data','data developer',
-    'junior data','associate data','staff data engineer','data engineer i',
-    'data engineer ii','data engineer 1','data engineer 2',
-    // intern/co-op variants
+    'data pipeline engineer','data platform engineer','data infrastructure engineer',
+    'database engineer','data integration engineer','bi engineer',
+    'data warehouse engineer','warehouse engineer','lakehouse engineer',
+    'spark engineer','cloud data engineer','data developer',
+    'junior data engineer','associate data engineer','entry level data engineer',
+    'data engineer i','data engineer ii','data engineer 1','data engineer 2',
+    'data engineer - new grad','new grad data engineer',
+    // Internship variants — all keywords a company might use
     'data engineering intern','data engineer intern','data intern',
-    'analytics intern','analytics engineering intern','etl intern',
-    'data platform intern','data infrastructure intern','pipeline intern',
-    'data co-op','data coop','data engineer co-op'
+    'analytics engineer intern','analytics engineering intern',
+    'etl intern','data pipeline intern','data platform intern',
+    'data infrastructure intern','pipeline intern','data warehouse intern',
+    'software engineer intern - data','software engineering intern - data',
+    'intern - data engineering','intern data engineer',
+    'data engineering internship','data engineer internship',
+    'summer intern data','summer data engineer','summer data engineering',
+    'fall intern data','spring intern data',
+    'data science intern','analytics intern',         // broad enough to catch cross-listed roles
+    // Co-op variants
+    'data engineer co-op','data engineering co-op','data co-op','data coop',
+    'data engineer coop','co-op data engineer','co-op - data',
+    'data engineering co op','data engineer co op',
+    'cooperative education data','data co op'
   ];
 
   // Block these in the TITLE (seniority / wrong field)
   const TITLE_BLOCK = [
-    'senior','sr.','sr ','staff','principal','lead ','manager','director',
+    'senior','sr.','sr ','principal','lead ','manager','director',
     'head of','vp ','vice president','architect','scientist','ml engineer',
     'machine learning','research engineer','research scientist','frontend',
     'backend','fullstack','full stack','full-stack','mobile','ios ','android',
