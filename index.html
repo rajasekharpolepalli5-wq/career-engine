@@ -967,11 +967,15 @@ async function runJobSearch(){
   function isUSA(loc){
     if(!loc || loc.trim()==='') return true; // blank = assume remote/USA
     const l = (' '+loc+' ').toLowerCase();
+    // Remote always passes
     if(l.includes('remote')) return true;
-    // Hard foreign exclusion first
+    // Hard foreign exclusion
     if(FOREIGN.some(f=>l.includes(f))) return false;
-    // Must positively match a US location
-    return USA_STATES.some(s=>l.includes(s));
+    // Positive US match
+    if(USA_STATES.some(s=>l.includes(s))) return true;
+    // If not clearly foreign and not clearly US - pass it (could be "Anywhere", "Worldwide", etc.)
+    // Only reject if FOREIGN matched above
+    return true;
   }
 
   // ── ALL 0-2yr / entry-level title keywords ──
@@ -1083,8 +1087,13 @@ async function runJobSearch(){
 
     // Score by YOUR skill overlap
     const hits = MY_SKILLS.filter(s=>full.includes(s)).length;
-    const raw = hits / MY_SKILLS.length; // 0-1
-    return Math.min(10, Math.round(raw * 16)); // scale so ~7 skills = 7/10
+    // Scale: 5 skill hits = 7/10, 8+ hits = 9/10, 12+ = 10/10
+    if(hits >= 12) return 10;
+    if(hits >= 8)  return 9;
+    if(hits >= 6)  return 8;
+    if(hits >= 4)  return 7;
+    if(hits >= 2)  return Math.max(1, hits + 3); // 2 hits = 5, 3 hits = 6
+    return hits; // 0 or 1
   }
 
   // Check if title passes DE filter
@@ -1392,12 +1401,14 @@ async function runJobSearch(){
       if(!isEntry(desc)) return;
 
       const score = scoreJob(liveTitle, desc);
-      if(score < 7) return; // 7/10 minimum
+      if(score < 5) return; // pre-filter: at least 5/10 from JD scoring
 
       j.score = score;
       j._match = profileMatch(liveTitle, desc);
-      j.score = j._match.score >= 7 ? j._match.score : score;
-      if(j.score < 7) return;
+      // Use profile match score if available, otherwise use JD score
+      const finalScore = j._match?.score > 0 ? j._match.score : score;
+      j.score = finalScore;
+      if(finalScore < 7) return; // final gate: 7/10
       matched.push(j);
     }catch(e){
       j.linkStatus = false;
