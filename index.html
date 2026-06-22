@@ -449,10 +449,19 @@ ${S.gateOpen ? renderGate() : ""}
 `;
 }
 
+function mdToHtml(t){
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`(.+?)`/g,'<code style="background:rgba(255,255,255,.12);padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
+    .replace(/\n/g,'<br>');
+}
+
 function renderChatBody(){
   const chips = ["Tell me about yourself","What's your Azure stack?","Are you open to internships?","What's your strongest project?"];
   return S.chatHistory.map(m=>`
-    <div class="chat-msg ${m.role}"><div class="bubble">${m.text}</div></div>
+    <div class="chat-msg ${m.role}"><div class="bubble">${m.role==='bot' ? mdToHtml(m.text) : esc(m.text)}</div></div>
   `).join("") + `
   <div class="chat-chips">${chips.map(c=>`<button onclick="quickChat('${c}')">${c}</button>`).join("")}</div>`;
 }
@@ -622,14 +631,27 @@ async function sendChat(){
   if(body) body.scrollTop = body.scrollHeight;
 
   const prompt = `You are an AI assistant representing Rajasekhar Polepalli, a Data Engineer.
-Profile: ${ME.summary}
-Skills: ${ME.coreSkills.join(", ")}
-Experience: LimeChat (Jul 2023-Jul 2024): 5M+ events/day pipelines, 40% latency cut, 99.9% SLA. GoKwik (May 2021-Jun 2023): 3M+ transactions/month, 90→35min batch runtime, 45% query perf gain.
-Education: MS CS Concordia Wisconsin (Dec 2026), BS CS Vel Tech.
-Target: Internships and entry-level Data Engineer roles. Open to remote/hybrid/relocate.
 
-Answer as Rajasekhar in first person. Be concise (2-3 sentences max). Professional but warm.
-Question: ${q}`;
+PROFILE: ${ME.summary}
+SKILLS: ${ME.coreSkills.join(", ")}
+
+EXPERIENCE:
+- LimeChat (Jul 2023–Jul 2024): Built ETL/ELT pipelines ingesting 5M+ events/day into Delta Lake across Bronze/Silver/Gold layers. Engineered Spark Structured Streaming jobs that cut end-to-end latency by 40% and absorbed 10x traffic bursts. Achieved 99.9% pipeline SLA via CI/CD with Azure DevOps.
+- GoKwik (May 2021–Jun 2023): PySpark transformation pipelines processing 3M+ transactions/month. Reduced Spark batch runtime from 90 to 35 minutes via partition pruning and broadcast joins. Lifted Synapse query performance by 45% through star schema redesign.
+
+STRONGEST PROJECT: The real-time event processing pipeline at LimeChat — ingested 5M+ events/day using Spark Structured Streaming on Databricks with Delta Lake checkpointing and event-time watermarks. Cut latency by 40% while handling 10x traffic bursts at 99.9% SLA. This was the most technically demanding work, requiring deep expertise in stream processing, partitioning strategies, and lakehouse design under production pressure.
+
+EDUCATION: MS CS Concordia University Wisconsin (graduating Dec 2026), BS CS Vel Tech University India.
+TARGET: Internships and entry-level Data Engineer roles. Open to remote/hybrid/relocate.
+
+VISA/WORK AUTH: On F-1 student visa. Authorized to work via CPT during studies (if CPT authorized by university) and eligible for 12-month OPT after graduation (Dec 2026), with potential 24-month STEM OPT extension (total 3 years OPT). Would need H-1B sponsorship after OPT period ends. Happy to discuss timeline with any interested employer.
+
+SALARY: Do NOT make up salary numbers. If asked about salary/compensation, say: "I'm flexible and open to discussing compensation based on the role and location — I'm primarily focused on finding the right opportunity to grow as a data engineer."
+
+AVAILABILITY: Can start an internship based on academic schedule. For full-time roles, available after Dec 2026 graduation or earlier if OPT allows.
+
+INSTRUCTIONS: Answer as Rajasekhar in first person. Be concise (2-4 sentences). Professional but warm. Do NOT use markdown asterisks or symbols — write in plain natural sentences. Only state facts from the profile above; never invent details.
+Question: \${q}\`;
 
   try{
     const res = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"},
