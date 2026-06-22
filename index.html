@@ -704,100 +704,8 @@ function jobAge(postedAt){
 }
 
 /* ══════════════════════════════════════════
-   JOB VERIFICATION ENGINE
+   (Old JOB VERIFICATION ENGINE removed — filters live inside runJobSearch)
 ══════════════════════════════════════════ */
-
-// Keywords that disqualify a job (senior / too experienced)
-const DISQUALIFY_EXP = [
-  '5+ years','6+ years','7+ years','8+ years','10+ years','9+ years',
-  '5 years of experience','6 years of experience','7 years of experience',
-  'minimum 5 years','minimum 6 years','at least 5','at least 6',
-  '5 or more years','6 or more years','senior level','principal level'
-];
-
-// Experience phrases that confirm it IS 0-2yr appropriate
-const QUALIFY_EXP = [
-  '0-2 year','0 to 2 year','0-1 year','1-2 year','1-3 year',
-  'entry level','entry-level','new grad','recent grad','fresh grad',
-  'junior','associate','intern','co-op','no experience required',
-  '0 years','1 year of experience','2 years of experience',
-  'early career','university','recent graduate','bootcamp','bachelor'
-];
-
-function verifyJob(j) {
-  const desc  = (j.description || '').toLowerCase();
-  const title = (j.role || '').toLowerCase();
-  const checks = [];
-  let passed = true;
-
-  // 1. JD must NOT require 5+ years experience
-  const requiresSenior = DISQUALIFY_EXP.some(k => desc.includes(k));
-  checks.push({
-    label: requiresSenior ? '❌ Requires 5+ years — skip' : '✅ No 5+ year requirement in JD',
-    ok: !requiresSenior
-  });
-  if (requiresSenior) passed = false;
-
-  // 2. JD must indicate 0-2 years OR not specify (reasonable for new roles)
-  // Only fail if it explicitly says 3+ years required
-  const OVER_2YR = ['3+ years','4+ years','3 years of experience','4 years of experience',
-                     'minimum 3 years','minimum 4 years','at least 3 years','at least 4 years',
-                     '3 or more years','4 or more years'];
-  const requiresOver2 = OVER_2YR.some(k => desc.includes(k));
-  const isEntryLevel  = QUALIFY_EXP.some(k => desc.includes(k) || title.includes(k));
-  checks.push({
-    label: requiresOver2 ? '❌ Requires 3+ years — above target' :
-           isEntryLevel  ? '✅ JD confirms 0-2 years / entry level' :
-                           '✅ No experience cap specified',
-    ok: !requiresOver2
-  });
-  if (requiresOver2) passed = false;
-
-  // 3. Must have valid URL + link is live
-  const hasUrl = j.url && j.url.startsWith('http');
-  const linkOk = hasUrl && j.linkStatus !== false;
-  checks.push({ label: linkOk ? '✅ Link live and verified' : hasUrl ? '❌ Link is dead' : '❌ No valid link', ok: linkOk });
-  if (!linkOk) passed = false;
-
-  // 4. Profile match ≥ 8/10 (based on JD content vs your skills)
-  const matchScore = j._match?.score || j.score || 0;
-  const goodMatch  = matchScore >= 8;
-  checks.push({
-    label: matchScore > 0 ? (goodMatch ? `✅ Match score ${matchScore}/10 — strong fit` : `❌ Match score ${matchScore}/10 — below 8/10 threshold`) : '⚠ Not yet scored',
-    ok: matchScore === 0 ? true : goodMatch // don't fail before scoring
-  });
-  if (matchScore > 0 && !goodMatch) passed = false;
-
-  // 5. JD has data engineering content (scored against your profile)
-  const hasJD = desc.length > 100;
-  const hasDataContent = j._match?.matched?.length > 0;
-  checks.push({
-    label: hasDataContent ? `✅ ${j._match.matched.length} of your skills match JD` : hasJD ? '⚠ Scoring in progress' : '⚠ JD not yet fetched',
-    ok: true
-  });
-
-  return { passed, checks };
-}
-
-function renderVerifyBadge(j) {
-  const { passed, checks } = verifyJob(j);
-  const failedChecks = checks.filter(c => !c.ok);
-  if (passed) {
-    return `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:#e2f5ec;color:#085041;cursor:pointer"
-      onclick="document.getElementById('vd-${j.id}').style.display=document.getElementById('vd-${j.id}').style.display==='none'?'block':'none'">
-      ✅ Verified (${checks.length}/${checks.length})</span>
-    <div id="vd-${j.id}" style="display:none;background:#f7fff9;border:1px solid #bfe8d2;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:12px;line-height:1.8">
-      ${checks.map(c=>`<div>${c.label}</div>`).join('')}
-    </div>`;
-  } else {
-    return `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:#fde8e6;color:#791f1f;cursor:pointer"
-      onclick="document.getElementById('vd-${j.id}').style.display=document.getElementById('vd-${j.id}').style.display==='none'?'block':'none'">
-      ⚠️ Failed ${failedChecks.length} check${failedChecks.length>1?'s':''}</span>
-    <div id="vd-${j.id}" style="display:none;background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:12px;line-height:1.8">
-      ${checks.map(c=>`<div>${c.label}</div>`).join('')}
-    </div>`;
-  }
-}
 
 /* ── HUNTER ── */
 function renderHunter(){
@@ -1178,6 +1086,15 @@ async function runJobSearch(){
     {slug:'spacex',         name:'SpaceX'},
     {slug:'rivian',         name:'Rivian'},
     {slug:'jobyaviation',   name:'Joby Aviation'},
+    // Large tech (added June 2026)
+    {slug:'tiktok',         name:'TikTok'},
+    {slug:'bytedance',      name:'ByteDance'},
+    {slug:'pinterest',      name:'Pinterest'},
+    {slug:'roblox',         name:'Roblox'},
+    {slug:'shopify',        name:'Shopify'},
+    {slug:'cruise',         name:'Cruise'},
+    {slug:'wayfair',        name:'Wayfair'},
+    {slug:'samsara',        name:'Samsara'},
   ];
 
   const LEVER_BOARDS = [
@@ -1292,6 +1209,12 @@ async function runJobSearch(){
         const loc = j.categories?.location||j.location||'';
         if(!isUSA(loc)) return;
         const id = `lv_${board.slug}_${j.id}`;
+        // Capture description from listing — Lever includes it inline
+        const lvDesc = [
+          (j.descriptionPlain||'').trim() || (j.description||'').replace(/<[^>]+>/g,' '),
+          (j.lists||[]).map(l => (l.text||'') + ' ' + ((l.content||'').replace(/<[^>]+>/g,' '))).join(' '),
+          (j.additionalPlain||'').trim() || (j.additional||'').replace(/<[^>]+>/g,' ')
+        ].join(' ').replace(/\s+/g,' ').trim();
         addCandidate({
           id, role:j.text, company:board.name,
           loc:loc||'Remote',
@@ -1299,7 +1222,8 @@ async function runJobSearch(){
           src:'Lever', board:'Lever',
           url:j.hostedUrl||`https://jobs.lever.co/${board.slug}/${j.id}`,
           referral:`careers@${board.slug}.com`,
-          postedAt:j.createdAt||Date.now()
+          postedAt:j.createdAt||Date.now(),
+          _scanDesc: lvDesc
         });
       });
     }catch(e){}
@@ -1323,13 +1247,17 @@ async function runJobSearch(){
         if(!isUSA(loc)) return;
         const id = `ash_${board.slug}_${j.id||j.jobUrl}`;
         const pay = j.compensation?.compensationTierSummary||'See posting';
+        // Capture description from the listing — Ashby includes it inline
+        const desc = (j.descriptionPlain||'').trim() ||
+                     (j.descriptionHtml||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
         addCandidate({
           id, role:j.title, company:board.name,
           loc:loc||'Remote',
           pay, src:'Ashby', board:'Ashby',
           url:j.jobUrl||j.applyUrl,
           referral:`careers@${board.slug.toLowerCase()}.com`,
-          postedAt:j.publishedAt?new Date(j.publishedAt).getTime():Date.now()
+          postedAt:j.publishedAt?new Date(j.publishedAt).getTime():Date.now(),
+          _scanDesc: desc
         });
       });
     }catch(e){}
@@ -1359,34 +1287,40 @@ async function runJobSearch(){
         desc = (d.content||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
       }
       else if(j.src==='Lever'){
-        const m = j.url.match(/lever\.co\/([^\/]+)\/([a-f0-9-]{36})/i);
-        if(!m) return;
-        const res = await fetch(`https://api.lever.co/v0/postings/${m[1]}/${m[2]}`,
-          {signal:AbortSignal.timeout(7000)});
-        if(!res.ok) return;
-        const d = await res.json();
-        liveTitle = d.text||j.role;
-        desc = [d.descriptionPlain||'',(d.lists||[]).map(l=>l.content||'').join(' '),d.additionalPlain||''].join(' ');
+        // Prefer description captured at scan time (Lever returns it inline)
+        if(j._scanDesc && j._scanDesc.length > 100){
+          desc = j._scanDesc;
+          liveTitle = j.role;
+        } else {
+          const m = j.url.match(/lever\.co\/([^\/]+)\/([a-f0-9-]{36})/i);
+          if(!m) return;
+          const res = await fetch(`https://api.lever.co/v0/postings/${m[1]}/${m[2]}`,
+            {signal:AbortSignal.timeout(7000)});
+          if(!res.ok) return;
+          const d = await res.json();
+          liveTitle = d.text||j.role;
+          desc = [d.descriptionPlain||'',(d.lists||[]).map(l=>l.content||'').join(' '),d.additionalPlain||''].join(' ');
+        }
       }
       else if(j.src==='Ashby'){
-        // Ashby job board API already gives description in listing, re-fetch for full text
-        const res = await fetch(
-          `https://api.ashbyhq.com/posting-api/job-board/${j.url.split('/').slice(-2,-1)[0]}?includeCompensation=true`,
-          {signal:AbortSignal.timeout(7000)});
-        // Just use descriptionPlain if available from job object
-        desc = j.description||'';
-        // For Ashby, parse description from the posting page indirectly - use what we have
-        if(!desc){
-          // Try fetching the individual posting
+        // Ashby returns descriptionPlain/Html in the listing — captured at scan time
+        if(j._scanDesc && j._scanDesc.length > 100){
+          desc = j._scanDesc;
+        } else {
+          // Fallback: re-fetch the board and find this job by id/title
+          const slugMatch = (j.url||'').match(/jobs\.ashbyhq\.com\/([^\/]+)/);
+          const slug = slugMatch ? slugMatch[1] : j.company.replace(/\s+/g,'');
           try{
-            const slug = j.company.replace(/\s+/g,'');
-            const postRes = await fetch(
+            const res = await fetch(
               `https://api.ashbyhq.com/posting-api/job-board/${slug}?includeCompensation=true`,
-              {signal:AbortSignal.timeout(5000)});
-            if(postRes.ok){
-              const pd = await postRes.json();
-              const found = (pd.jobs||[]).find(jj=>jj.title===j.role);
-              if(found) desc = (found.descriptionHtml||found.descriptionPlain||'').replace(/<[^>]+>/g,' ');
+              {signal:AbortSignal.timeout(7000)});
+            if(res.ok){
+              const d = await res.json();
+              const found = (d.jobs||[]).find(jj => jj.title===j.role || j.url?.includes(jj.id));
+              if(found){
+                desc = (found.descriptionPlain||'').trim() ||
+                       (found.descriptionHtml||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+              }
             }
           }catch(e){}
         }
@@ -1498,42 +1432,12 @@ function renderReferralModal(){
   </div></div>`;
 }
 
-/* ── AUTO-APPLY BRIDGE ── */
-function autoApply(id){
+/* ── APPLY: open posting + mark applied ── */
+function applyToJob(id){
   const j = S.jobs.find(x=>x.id===id)||S.apps.find(x=>x.id===id);
-  if(!j) return;
-  // Open job URL and signal extension
-  const tab = window.open(j.url, '_blank');
-  // Post message to extension via localStorage bridge
-  localStorage.setItem('ce_autofill', JSON.stringify({
-    action: 'autofill',
-    jobId: j.id,
-    role: j.role,
-    company: j.company,
-    url: j.url,
-    profile: {
-      firstName: 'Rajasekhar',
-      lastName: 'Polepalli',
-      email: 'rajasekharpolepalli5@gmail.com',
-      phone: '+14144364320',
-      location: 'Wauwatosa, WI',
-      linkedin: 'https://linkedin.com/in/rajasekharpolepalli-0806793a3',
-      website: 'https://rajasekhar-polepalli.vercel.app',
-      university: 'Concordia University Wisconsin',
-      degree: 'Master of Science in Computer Science',
-      gradYear: '2026',
-      yearsExp: '3',
-      summary: 'Data engineer with 3+ years on Azure, Databricks, PySpark, Delta Lake. MS CS candidate Dec 2026.'
-    },
-    ts: Date.now()
-  }));
+  if(!j||!j.url) return;
+  window.open(j.url, '_blank', 'noopener');
   markApplied(id);
-  // Show instructions if extension not installed
-  setTimeout(()=>{
-    if(!localStorage.getItem('ce_ext_ack')){
-      alert('Extension not detected. Install the Career Engine Chrome Extension to auto-fill forms.\n\nFor now: the job page has opened — fill manually or install the extension.');
-    }
-  }, 2000);
 }
 
 /* ── JOB CARD ── */
@@ -1784,8 +1688,7 @@ function jobCard(j, fromFeed){
         ${age.urgent?'🟢 ':''}${age.label}
        </span>`
     : '';
-  const { passed } = verifyJob(j);
-  return `<div class="jcard" style="${age?.urgent?'border-color:#bfe8d2;':''} ${!passed?'opacity:0.7;border-style:dashed;':''}"">
+  return `<div class="jcard" style="${age?.urgent?'border-color:#bfe8d2;':''}">
     <div class="jhead">
       <div>
         <div class="jtitle">${esc(j.role)} ${ageBadge}</div>
@@ -1803,13 +1706,12 @@ function jobCard(j, fromFeed){
       ${j.tailored?'<span class="pill pill-b">Resume tailored</span>':''}
       ${j.linkStatus===true?'<span style="font-size:11px;color:#059669;font-weight:600">🟢 Link live</span>':j.linkStatus===false?'<span style="font-size:11px;color:#dc2626;font-weight:600">🔴 Dead link</span>':''}
     </div>
-    <div style="margin-top:8px">${renderVerifyBadge(j)}</div>
     ${renderMatchBreakdownAI(j)}
     ${j.tailored ? renderTailoredResume(j.tailored, j.id) : ""}
     <div class="jacts">
       <button onclick="tailorJob('${j.id}',this)">${j.tailored?"Re-tailor":"✦ Tailor resume"}</button>
       <button onclick="aiScoreJob('${j.id}',this)" style="background:#f0f4ff;border-color:#c7d2fe;color:#3730a3">⚡ AI Match</button>
-      ${j.url?`<button class="apply-btn" onclick="autoApply('${j.id}')">⚡ Auto-Apply</button>`:""}
+      ${j.url?`<button class="apply-btn" onclick="applyToJob('${j.id}')">⚡ Apply &amp; mark</button>`:""}
       ${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener" style="font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink2);font-weight:600;text-decoration:none;display:inline-block">Open posting ↗</a>`:""}
       ${j.referral?`<button onclick="askReferral('${j.id}')" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3">✉ Ask referral</button>`:""}
       ${!j.applied&&fromFeed?`<button onclick="markApplied('${j.id}')">Mark applied</button>`:""}
