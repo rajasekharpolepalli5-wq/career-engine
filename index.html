@@ -706,48 +706,47 @@ function verifyJob(j) {
   // 1. JD must NOT require 5+ years experience
   const requiresSenior = DISQUALIFY_EXP.some(k => desc.includes(k));
   checks.push({
-    label: requiresSenior ? '❌ Requires 5+ years exp' : '✅ Experience level OK (no 5+ yr requirement)',
+    label: requiresSenior ? '❌ Requires 5+ years — skip' : '✅ No 5+ year requirement in JD',
     ok: !requiresSenior
   });
   if (requiresSenior) passed = false;
 
-  // 2. JD or title should indicate 0-2 years / entry level
-  // (we don't REQUIRE this — a JD can just not mention exp and still be OK)
-  const isEntryLevel = QUALIFY_EXP.some(k => desc.includes(k) || title.includes(k));
+  // 2. JD must indicate 0-2 years OR not specify (reasonable for new roles)
+  // Only fail if it explicitly says 3+ years required
+  const OVER_2YR = ['3+ years','4+ years','3 years of experience','4 years of experience',
+                     'minimum 3 years','minimum 4 years','at least 3 years','at least 4 years',
+                     '3 or more years','4 or more years'];
+  const requiresOver2 = OVER_2YR.some(k => desc.includes(k));
+  const isEntryLevel  = QUALIFY_EXP.some(k => desc.includes(k) || title.includes(k));
   checks.push({
-    label: isEntryLevel ? '✅ Entry/junior level confirmed in JD' : '⚠ No explicit 0-2yr mention (check JD)',
-    ok: true // warning only — don't fail on this
+    label: requiresOver2 ? '❌ Requires 3+ years — above target' :
+           isEntryLevel  ? '✅ JD confirms 0-2 years / entry level' :
+                           '✅ No experience cap specified',
+    ok: !requiresOver2
   });
+  if (requiresOver2) passed = false;
 
-  // 3. Must have JD content (fetched and scored)
-  const hasJD = desc.length > 100;
-  checks.push({
-    label: hasJD ? '✅ JD content fetched & scored' : '⚠ JD not yet fetched',
-    ok: true // don't fail — JD fetch happens async
-  });
-
-  // 4. Must have valid URL
+  // 3. Must have valid URL + link is live
   const hasUrl = j.url && j.url.startsWith('http');
-  checks.push({ label: hasUrl ? '✅ Link verified live' : '❌ No valid link', ok: hasUrl });
-  if (!hasUrl) passed = false;
+  const linkOk = hasUrl && j.linkStatus !== false;
+  checks.push({ label: linkOk ? '✅ Link live and verified' : hasUrl ? '❌ Link is dead' : '❌ No valid link', ok: linkOk });
+  if (!linkOk) passed = false;
 
-  // 5. Posted within 48 hours (fresh jobs only)
-  if (j.postedAt) {
-    const hrsOld = Math.floor((Date.now() - j.postedAt) / 3600000);
-    const fresh = hrsOld <= 48;
-    checks.push({
-      label: fresh ? `✅ Posted ${hrsOld}h ago (fresh)` : `❌ Posted ${Math.floor(hrsOld/24)}d ago (older than 48h)`,
-      ok: fresh
-    });
-    if (!fresh) passed = false;
-  }
-
-  // 6. Profile match score — must match your skills in the JD
-  const matchPct = j._match?.matchPct || 0;
-  const goodMatch = matchPct > 0; // any positive JD match passes — score shown on card
+  // 4. Profile match ≥ 8/10 (based on JD content vs your skills)
+  const matchScore = j._match?.score || j.score || 0;
+  const goodMatch  = matchScore >= 8;
   checks.push({
-    label: matchPct > 0 ? `✅ JD match: ${matchPct}% of your skills found` : '⚠ Not yet scored (run search)',
-    ok: true // don't fail on this — matchPct shown on card
+    label: matchScore > 0 ? (goodMatch ? `✅ Match score ${matchScore}/10 — strong fit` : `❌ Match score ${matchScore}/10 — below 8/10 threshold`) : '⚠ Not yet scored',
+    ok: matchScore === 0 ? true : goodMatch // don't fail before scoring
+  });
+  if (matchScore > 0 && !goodMatch) passed = false;
+
+  // 5. JD has data engineering content (scored against your profile)
+  const hasJD = desc.length > 100;
+  const hasDataContent = j._match?.matched?.length > 0;
+  checks.push({
+    label: hasDataContent ? `✅ ${j._match.matched.length} of your skills match JD` : hasJD ? '⚠ Scoring in progress' : '⚠ JD not yet fetched',
+    ok: true
   });
 
   return { passed, checks };
@@ -777,14 +776,15 @@ function renderVerifyBadge(j) {
 function renderHunter(){
   if(!S.searched) return `<div class="card"><div class="empty-state">
     <h3>Live job search with verification</h3>
-    <p style="max-width:500px;margin:0 auto 12px">
-      Scans 50+ company boards. Reads <strong>every actual JD</strong> and scores it against your Azure/Databricks/PySpark skills.<br>
-      Only shows jobs that pass <strong>3 hard rules</strong>:
+    <p style="max-width:520px;margin:0 auto 12px">
+      Scans 50+ company boards. Reads <strong>every actual JD</strong> and scores it against your Azure/Databricks/PySpark/ETL skills.<br><br>
+      Shows only jobs that pass <strong>all 4 rules</strong>:
     </p>
-    <div style="display:inline-flex;flex-direction:column;gap:6px;text-align:left;margin:0 auto 20px;font-size:13px;color:var(--muted)">
-      <span>✅ JD does NOT require 5+ years experience</span>
-      <span>✅ Posted within the last 48 hours</span>
-      <span>✅ Must have a live, working link</span>
+    <div style="display:inline-flex;flex-direction:column;gap:8px;text-align:left;margin:0 auto 20px;font-size:13px;color:var(--ink2)">
+      <span>✅ JD scores <strong>≥ 8/10</strong> match against your skill set</span>
+      <span>✅ JD does <strong>NOT</strong> require 5+ years experience</span>
+      <span>✅ JD indicates <strong>0-2 years</strong> or does not specify (no 3+ yr requirement)</span>
+      <span>✅ Link is <strong>live and verified</strong> (dead links auto-removed)</span>
     </div>
     <br>
     <button class="btn" onclick="runJobSearch()">▶ Run job search</button>
@@ -1133,7 +1133,8 @@ async function runJobSearch(){
         j._match = profileMatch(j.role, j.description||'');
         // Override score with profile match score
         j.score = j._match.score;
-        scoredJobs.push(j);
+        // Only keep jobs with match score ≥ 8/10
+        if(j.score >= 8) scoredJobs.push(j);
       }
     }));
     S.searchProgress = 35 + Math.floor((i/candidateJobs.length)*55);
