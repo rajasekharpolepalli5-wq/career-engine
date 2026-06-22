@@ -802,16 +802,15 @@ function renderVerifyBadge(j) {
 /* ── HUNTER ── */
 function renderHunter(){
   if(!S.searched) return `<div class="card"><div class="empty-state">
-    <h3>Live job search with verification</h3>
-    <p style="max-width:520px;margin:0 auto 12px">
-      Scans 50+ company boards. Reads <strong>every actual JD</strong> and scores it against your Azure/Databricks/PySpark/ETL skills.<br><br>
-      Shows only jobs that pass <strong>all 4 rules</strong>:
+    <h3>Live job search — 3 sources, zero noise</h3>
+    <p style="max-width:560px;margin:0 auto 12px">
+      Scans <strong>100+ companies</strong> across Greenhouse, Lever & Ashby. Reads every actual JD and scores it against your Azure/Databricks/PySpark/ETL profile.<br><br>
+      Only shows jobs that pass <strong>all 3 filters</strong>:
     </p>
     <div style="display:inline-flex;flex-direction:column;gap:8px;text-align:left;margin:0 auto 20px;font-size:13px;color:var(--ink2)">
-      <span>✅ JD scores <strong>≥ 8/10</strong> match against your skill set</span>
-      <span>✅ JD does <strong>NOT</strong> require 5+ years experience</span>
-      <span>✅ JD indicates <strong>0-2 years</strong> or does not specify (no 3+ yr requirement)</span>
-      <span>✅ Link is <strong>live and verified</strong> (dead links auto-removed)</span>
+      <span>✅ Title is strictly <strong>data engineering related</strong> (intern/junior/entry-level DE only)</span>
+      <span>✅ JD does <strong>NOT</strong> require 3+ years experience</span>
+      <span>✅ Profile match score <strong>≥ 7/10</strong> against your Azure/Databricks/PySpark skills</span>
     </div>
     <br>
     <button class="btn" onclick="runJobSearch()">▶ Run job search</button>
@@ -826,33 +825,31 @@ function renderHunter(){
     </div>
   </div></div>`;
 
-  const verified   = S.jobs.filter(j=>verifyJob(j).passed);
-  const unverified = S.jobs.filter(j=>!verifyJob(j).passed);
-  const sorted = [...S.jobs].sort((a,b)=>{
-    const av = verifyJob(a).passed, bv = verifyJob(b).passed;
-    if(av!==bv) return bv-av;              // verified first
-    return (b.postedAt||0)-(a.postedAt||0); // then newest
-  });
+  // Sort by match score desc, then newest
+  const sorted = [...S.jobs].sort((a,b)=>
+    (b._match?.matchPct||b.score*10||0)-(a._match?.matchPct||a.score*10||0)||
+    (b.postedAt||0)-(a.postedAt||0)
+  );
+
+  // Source badges
+  const bySrc = {};
+  S.jobs.forEach(j=>{ bySrc[j.src]=(bySrc[j.src]||0)+1; });
+  const srcBadges = Object.entries(bySrc).map(([s,n])=>
+    `<div style="background:#e8f0fe;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:600;color:#1a3c8f">${s}: ${n}</div>`
+  ).join('');
 
   return `
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
     <div style="background:#e2f5ec;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#085041">
-      ✅ ${verified.length} verified jobs
+      \u2705 ${S.jobs.length} matched jobs
     </div>
-    <div style="background:#fde8e6;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#791f1f">
-      ⚠️ ${unverified.length} failed verification
-    </div>
-    <button class="btn-ghost" onclick="S.showFailed=!S.showFailed;render()" style="font-size:12px">
-      ${S.showFailed?'Hide':'Show'} failed jobs
-    </button>
-    <button class="btn-ghost" onclick="runJobSearch()" style="font-size:12px">↻ Refresh</button>
+    ${srcBadges}
+    <button class="btn-ghost" onclick="runJobSearch()" style="font-size:12px">\u21bb Refresh</button>
   </div>
   <div class="notice" style="margin-bottom:12px">
-    Showing <strong>${S.showFailed?sorted.length:verified.length} jobs</strong> · 
-    Strictly intern/co-op/0-2yr · Newest first · 
-    ${S.lastRefresh ? `Last refreshed: ${new Date(S.lastRefresh).toLocaleTimeString()} · Auto-refreshes every 30 min` : 'Auto-refreshes every 30 min'}
+    <strong>${sorted.length} jobs</strong> \u00b7 0\u20132yr DE roles \u00b7 \u22657/10 profile match \u00b7 Sorted by match score \u00b7 ${S.lastRefresh ? `Last refreshed: ${new Date(S.lastRefresh).toLocaleTimeString()} \u00b7 Auto-refreshes every 30 min` : 'Auto-refreshes every 30 min'}
   </div>
-  ${sorted.filter(j=>S.showFailed||verifyJob(j).passed).map(j=>jobCard(j, true)).join("")}`;
+  ${sorted.map(j=>jobCard(j, true)).join("")}`;
 }
 
 
@@ -912,327 +909,466 @@ async function verifyLink(url){
 async function runJobSearch(){
   S.searching = true;
   S.searched = true;
-  S.searchProgress = 5;
-  S.searchStatus = 'Fetching jobs from Greenhouse & Lever…';
+  S.searchProgress = 2;
+  S.searchStatus = 'Starting job search across Greenhouse, Lever & Ashby…';
   S.lastRefresh = Date.now();
   render();
 
-  // Preserve applied/tailored state from previous run
   const prevJobs = {};
   S.jobs.forEach(j=>{ prevJobs[j.id]={applied:j.applied,tailored:j.tailored}; });
 
-  let freshJobs = SEED_JOBS.map(j=>({
-    ...j,
-    applied: prevJobs[j.id]?.applied||false,
-    tailored: prevJobs[j.id]?.tailored||null,
-    linkStatus: null // null = unchecked, true = live, false = dead
-  }));
-
-  // ── STEP 1: Try live Greenhouse boards ──
-  // ── USA-only location checker ──
-  const USA_STATES = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy','dc','remote','united states','usa','u.s.'];
+  // ── USA location check ──
+  const USA_STATES = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia',
+    'ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc',
+    'nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy','dc',
+    'remote','united states','usa','u.s.','new york','los angeles','san francisco','chicago',
+    'seattle','boston','austin','denver','atlanta','miami'];
   function isUSA(loc){
-    if(!loc) return true; // no location = assume remote/USA
+    if(!loc) return true;
     const l = loc.toLowerCase();
     if(l.includes('remote')) return true;
-    // Exclude non-USA
-    const foreign = ['canada','uk','london','dublin','toronto','berlin','amsterdam','singapore','india','bangalore','sydney','australia','germany','france','japan','brazil','mexico','china','korea'];
+    const foreign = ['canada','uk','london','dublin','toronto','berlin','amsterdam','singapore',
+      'india','bangalore','sydney','australia','germany','france','japan','brazil','mexico',
+      'china','korea','netherlands','sweden','ireland','poland','spain','italy','paris',
+      'munich','zurich','switzerland','hong kong','taiwan'];
     if(foreign.some(f=>l.includes(f))) return false;
-    // Include if matches US state/city pattern
-    return USA_STATES.some(s=>l.includes(', '+s)||l.includes(' '+s)||l===s||l.includes('united states'));
+    if(USA_STATES.some(s=>l.includes(s))) return true;
+    // If no foreign match and no US match, include (could be remote)
+    return true;
   }
 
-  const LIVE_BOARDS = [
-    // Aerospace & Hardware
-    {company:'spacex',          name:'SpaceX',           src:'Greenhouse'},
-    {company:'rivian',          name:'Rivian',           src:'Greenhouse'},
-    {company:'verkada',         name:'Verkada',          src:'Greenhouse'},
-    {company:'jobyaviation',    name:'Joby Aviation',    src:'Greenhouse'},
-    // Fintech
-    {company:'stripe',          name:'Stripe',           src:'Greenhouse'},
-    {company:'ramp',            name:'Ramp',             src:'Greenhouse'},
-    {company:'brex',            name:'Brex',             src:'Greenhouse'},
-    {company:'plaid',           name:'Plaid',            src:'Greenhouse'},
-    {company:'robinhood',       name:'Robinhood',        src:'Greenhouse'},
-    {company:'coinbase',        name:'Coinbase',         src:'Greenhouse'},
-    {company:'chime',           name:'Chime',            src:'Greenhouse'},
-    {company:'nerdwallet',      name:'NerdWallet',       src:'Greenhouse'},
-    // Data / Cloud / Analytics
-    {company:'databricks',      name:'Databricks',       src:'Greenhouse'},
-    {company:'snowflake',       name:'Snowflake',        src:'Greenhouse'},
-    {company:'dbtlabsinc',      name:'dbt Labs',         src:'Greenhouse'},
-    {company:'fivetran',        name:'Fivetran',         src:'Greenhouse'},
-    {company:'datadog',         name:'Datadog',          src:'Greenhouse'},
-    {company:'elastic',         name:'Elastic',          src:'Greenhouse'},
-    {company:'grafana',         name:'Grafana Labs',     src:'Greenhouse'},
-    {company:'mongodb',         name:'MongoDB',          src:'Greenhouse'},
-    {company:'hashicorp',       name:'HashiCorp',        src:'Greenhouse'},
-    {company:'influxdata',      name:'InfluxData',       src:'Greenhouse'},
-    // Tech / SaaS
-    {company:'figma',           name:'Figma',            src:'Greenhouse'},
-    {company:'notion',          name:'Notion',           src:'Greenhouse'},
-    {company:'discord',         name:'Discord',          src:'Greenhouse'},
-    {company:'reddit',          name:'Reddit',           src:'Greenhouse'},
-    {company:'duolingo',        name:'Duolingo',         src:'Greenhouse'},
-    {company:'airbnb',          name:'Airbnb',           src:'Greenhouse'},
-    {company:'lyft',            name:'Lyft',             src:'Greenhouse'},
-    {company:'instacart',       name:'Instacart',        src:'Greenhouse'},
-    {company:'doordash',        name:'DoorDash',         src:'Greenhouse'},
-    {company:'twilio',          name:'Twilio',           src:'Greenhouse'},
-    {company:'cloudflare',      name:'Cloudflare',       src:'Greenhouse'},
-    {company:'dropbox',         name:'Dropbox',          src:'Greenhouse'},
-    {company:'box',             name:'Box',              src:'Greenhouse'},
-    {company:'zendesk',         name:'Zendesk',          src:'Greenhouse'},
-    {company:'hubspot',         name:'HubSpot',          src:'Greenhouse'},
-    {company:'asana',           name:'Asana',            src:'Greenhouse'},
-    {company:'lattice',         name:'Lattice',          src:'Greenhouse'},
-    {company:'rippling',        name:'Rippling',         src:'Greenhouse'},
-    {company:'gusto',           name:'Gusto',            src:'Greenhouse'},
-    {company:'toast',           name:'Toast',            src:'Greenhouse'},
-    // AI / ML
-    {company:'scale',           name:'Scale AI',         src:'Greenhouse'},
-    {company:'anthropic',       name:'Anthropic',        src:'Greenhouse'},
-    {company:'openai',          name:'OpenAI',           src:'Greenhouse'},
-    {company:'cohere',          name:'Cohere',           src:'Greenhouse'},
-    {company:'huggingface',     name:'Hugging Face',     src:'Greenhouse'},
-    // Healthcare / Other
-    {company:'veeva',           name:'Veeva',            src:'Greenhouse'},
-    {company:'benchling',       name:'Benchling',        src:'Greenhouse'},
+  // ── ALL 0-2yr / entry-level title keywords ──
+  // A job TITLE must contain at least one DE_TITLE keyword
+  // AND must NOT contain any SENIOR_BLOCK keyword
+  const DE_TITLE_KEYWORDS = [
+    'data engineer','data engineering','analytics engineer','etl engineer',
+    'data pipeline','platform engineer','data platform','data infrastructure',
+    'database engineer','data integration','bi engineer','data warehouse engineer',
+    'warehouse engineer','lakehouse','spark engineer','cloud data','data developer',
+    'junior data','associate data','staff data engineer','data engineer i',
+    'data engineer ii','data engineer 1','data engineer 2',
+    // intern/co-op variants
+    'data engineering intern','data engineer intern','data intern',
+    'analytics intern','analytics engineering intern','etl intern',
+    'data platform intern','data infrastructure intern','pipeline intern',
+    'data co-op','data coop','data engineer co-op'
   ];
-  // ── YOUR CORE SKILLS for JD matching ──
-  const MY_CORE = [
+
+  // Block these in the TITLE (seniority / wrong field)
+  const TITLE_BLOCK = [
+    'senior','sr.','sr ','staff','principal','lead ','manager','director',
+    'head of','vp ','vice president','architect','scientist','ml engineer',
+    'machine learning','research engineer','research scientist','frontend',
+    'backend','fullstack','full stack','full-stack','mobile','ios ','android',
+    'devops','sre ','site reliability','security engineer','qa engineer',
+    'test engineer','product manager','program manager','data analyst',
+    'business analyst','marketing','sales','recruiter','designer','ux','ui '
+  ];
+
+  // 0-2yr experience keywords to look for in JD (at least one must match OR no exp specified)
+  const EXP_0_2_KEYWORDS = [
+    '0-2 year','0 to 2 year','0-1 year','1-2 year','1-3 year','2 years',
+    'less than 2','under 2 year','up to 2 year','within 2 year',
+    'entry level','entry-level','junior','associate level','new grad',
+    'recent grad','recent graduate','fresh grad','fresh graduate',
+    'new graduate','college grad','university grad','graduating',
+    'intern','co-op','coop','internship','co op',
+    'no experience required','no prior experience','no professional experience',
+    'early career','early-career','0+ years','1+ year','1+ years',
+    'bachelor','bs degree','b.s.','undergraduate','bootcamp',
+    '0 years experience','1 year experience','2 years experience',
+    'open to new grads','open to fresh','graduate level'
+  ];
+
+  // Hard block if JD explicitly requires 3+ years
+  const EXP_BLOCK_JD = [
+    '3+ years','4+ years','5+ years','6+ years','7+ years','8+ years',
+    '10+ years','3 or more years','4 or more years','5 or more years',
+    'minimum 3 years','minimum 4 years','minimum 5 years',
+    'at least 3 years','at least 4 years','at least 5 years',
+    '3 years of experience','4 years of experience','5 years of experience',
+    '6 years of experience','7 years of experience','8 years of experience'
+  ];
+
+  // JD must be data engineering related (at least 2 of these)
+  const DE_JD_KEYWORDS = [
+    'data engineer','data engineering','analytics engineer','etl','elt',
+    'data pipeline','data warehouse','data lake','lakehouse','pyspark',
+    'databricks','spark','delta lake','apache spark','data platform',
+    'data infrastructure','data integration','data mart','dbt','airflow',
+    'kafka','flink','beam','bigquery','redshift','snowflake','azure synapse',
+    'azure data factory','data modeling','dimensional model','star schema',
+    'bronze silver gold','medallion architecture','streaming','batch processing',
+    'data quality','data governance','data lineage','data catalog',
+    'sql','python','scala','data orchestration','workflow orchestration',
+    'data ingestion','data transformation','data collection'
+  ];
+
+  // Your skills for profile match scoring (0-10)
+  const MY_SKILLS = [
     'azure databricks','databricks','pyspark','delta lake','azure data factory',
-    'adls','azure synapse','microsoft fabric','spark structured streaming',
-    'spark sql','data pipeline','etl','elt','data warehouse','lakehouse',
+    'adls','adls gen2','azure synapse','synapse analytics','microsoft fabric',
+    'spark structured streaming','spark sql','apache spark','spark',
+    'data pipeline','etl','elt','data warehouse','lakehouse','data lake',
     'bronze silver gold','medallion','data modeling','dimensional model',
-    'star schema','data platform','data infrastructure','data engineer',
-    'analytics engineer','python','sql','t-sql','postgresql','mysql',
-    'ci/cd','azure devops','git','data governance','data quality','streaming',
-    'real-time','dbt','airflow','kafka','snowflake','bigquery'
+    'star schema','snowflake schema','data platform','data infrastructure',
+    'data engineer','analytics engineer','python','sql','t-sql','spark sql',
+    'postgresql','mysql','postgres','ci/cd','azure devops','git','github',
+    'data governance','data quality','data lineage','streaming','real-time',
+    'dbt','airflow','kafka','snowflake','bigquery','redshift','aws','gcp',
+    'azure','cloud','parquet','json','rest api','pandas','numpy',
+    'data integration','data ingestion','batch processing','yaml','pytest'
   ];
 
-  // Block JDs that require clearly too much exp or wrong role
-  const EXP_BLOCK  = ['10+ years','8+ years','7+ years','6+ years','5+ years',
-                       '5 years of experience','6 years','7 years','8 years','10 years'];
-  const ROLE_BLOCK = ['data scientist','machine learning scientist','research scientist',
-                      'frontend engineer','backend engineer','mobile engineer',
-                      'ios engineer','android developer','security engineer',
-                      'qa engineer','test engineer','product manager',
-                      'program manager','devops engineer','site reliability',
-                      'recruiter','sales','marketing'];
-
-  // Score JD content against your profile (0-100)
-  function scoreJD(title, desc){
+  // Score a job: returns 0-10 based on skill overlap
+  function scoreJob(title, desc){
     const t = (title||'').toLowerCase();
     const d = (desc||'').toLowerCase();
     const full = t + ' ' + d;
 
-    // Hard block — wrong role type
-    if(ROLE_BLOCK.some(r=>t.includes(r))) return 0;
-    // Hard block — too much experience required
-    if(EXP_BLOCK.some(e=>d.includes(e))) return 0;
+    // Count DE JD keyword matches (must have at least 2)
+    const deHits = DE_JD_KEYWORDS.filter(k=>full.includes(k)).length;
+    if(deHits < 2) return 0;
 
-    // Must mention "data" and some engineering in the JD
-    const hasDataEng = full.includes('data engineer') || full.includes('data engineering') ||
-                       full.includes('analytics engineer') || full.includes('data pipeline') ||
-                       full.includes('data platform') || full.includes('etl') ||
-                       full.includes('elt') || full.includes('data warehouse') ||
-                       full.includes('lakehouse') || full.includes('pyspark') ||
-                       full.includes('databricks') || full.includes('spark') ||
-                       full.includes('delta lake');
-    if(!hasDataEng) return 0;
-
-    // Score by how many of YOUR skills the JD mentions
-    const hits = MY_CORE.filter(s=>full.includes(s)).length;
-    // Max hits is MY_CORE.length, scale to 100
-    const score = Math.round((hits / MY_CORE.length) * 100);
-    return Math.min(99, score);
+    // Score by YOUR skill overlap
+    const hits = MY_SKILLS.filter(s=>full.includes(s)).length;
+    const raw = hits / MY_SKILLS.length; // 0-1
+    return Math.min(10, Math.round(raw * 16)); // scale so ~7 skills = 7/10
   }
 
-  // Fetch full JD and score it — returns {live, score, description, title}
-  async function fetchAndScoreJob(url, title){
-    try {
-      if(url.includes('greenhouse.io')){
-        const match = url.match(/greenhouse\.io\/([^\/\?]+)\/jobs\/(\d+)/);
-        if(match){
-          const [,board,jobId] = match;
-          const res = await fetch(
-            `https://boards-api.greenhouse.io/v1/boards/${board}/jobs/${jobId}?questions=true`,
-            {signal: AbortSignal.timeout(6000)}
-          );
-          if(!res.ok) return {live:false, score:0};
-          const data = await res.json();
-          if(!data.title) return {live:false, score:0};
-          const desc = (data.content||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-          const score = scoreJD(data.title, desc);
-          return {live:true, score, description:desc, title:data.title};
+  // Check if title passes DE filter
+  function isTitleDE(title){
+    const t = (title||'').toLowerCase();
+    if(TITLE_BLOCK.some(k=>t.includes(k))) return false;
+    return DE_TITLE_KEYWORDS.some(k=>t.includes(k));
+  }
+
+  // Check if JD is 0-2yr appropriate
+  function isEntry(desc){
+    const d = (desc||'').toLowerCase();
+    if(EXP_BLOCK_JD.some(k=>d.includes(k))) return false; // explicitly 3+ yr → skip
+    // Pass if has entry-level signal OR no experience level mentioned at all
+    return true; // we already blocked 3+ above; 0-2 signal is bonus not required
+  }
+
+  // ── ALL COMPANY BOARDS ──
+  const GREENHOUSE_BOARDS = [
+    // Data / Cloud / Analytics (highest priority)
+    {slug:'databricks',     name:'Databricks'},
+    {slug:'snowflake',      name:'Snowflake'},
+    {slug:'dbtlabsinc',     name:'dbt Labs'},
+    {slug:'fivetran',       name:'Fivetran'},
+    {slug:'datadog',        name:'Datadog'},
+    {slug:'elastic',        name:'Elastic'},
+    {slug:'grafana',        name:'Grafana Labs'},
+    {slug:'mongodb',        name:'MongoDB'},
+    {slug:'hashicorp',      name:'HashiCorp'},
+    {slug:'influxdata',     name:'InfluxData'},
+    {slug:'airbyte',        name:'Airbyte'},
+    {slug:'starburst',      name:'Starburst'},
+    {slug:'imply',          name:'Imply'},
+    {slug:'rockset',        name:'Rockset'},
+    {slug:'materialize',    name:'Materialize'},
+    // AI / ML
+    {slug:'anthropic',      name:'Anthropic'},
+    {slug:'openai',         name:'OpenAI'},
+    {slug:'scale',          name:'Scale AI'},
+    {slug:'cohere',         name:'Cohere'},
+    {slug:'huggingface',    name:'Hugging Face'},
+    {slug:'together',       name:'Together AI'},
+    {slug:'perplexity',     name:'Perplexity'},
+    {slug:'mistral',        name:'Mistral AI'},
+    // Fintech
+    {slug:'stripe',         name:'Stripe'},
+    {slug:'ramp',           name:'Ramp'},
+    {slug:'brex',           name:'Brex'},
+    {slug:'plaid',          name:'Plaid'},
+    {slug:'robinhood',      name:'Robinhood'},
+    {slug:'coinbase',       name:'Coinbase'},
+    {slug:'chime',          name:'Chime'},
+    {slug:'nerdwallet',     name:'NerdWallet'},
+    {slug:'affirm',         name:'Affirm'},
+    {slug:'marqeta',        name:'Marqeta'},
+    // Tech / SaaS
+    {slug:'figma',          name:'Figma'},
+    {slug:'notion',         name:'Notion'},
+    {slug:'discord',        name:'Discord'},
+    {slug:'reddit',         name:'Reddit'},
+    {slug:'duolingo',       name:'Duolingo'},
+    {slug:'airbnb',         name:'Airbnb'},
+    {slug:'lyft',           name:'Lyft'},
+    {slug:'instacart',      name:'Instacart'},
+    {slug:'doordash',       name:'DoorDash'},
+    {slug:'twilio',         name:'Twilio'},
+    {slug:'cloudflare',     name:'Cloudflare'},
+    {slug:'dropbox',        name:'Dropbox'},
+    {slug:'box',            name:'Box'},
+    {slug:'zendesk',        name:'Zendesk'},
+    {slug:'hubspot',        name:'HubSpot'},
+    {slug:'asana',          name:'Asana'},
+    {slug:'rippling',       name:'Rippling'},
+    {slug:'gusto',          name:'Gusto'},
+    {slug:'toast',          name:'Toast'},
+    {slug:'verkada',        name:'Verkada'},
+    {slug:'lattice',        name:'Lattice'},
+    {slug:'benchling',      name:'Benchling'},
+    {slug:'veeva',          name:'Veeva'},
+    // Aerospace
+    {slug:'spacex',         name:'SpaceX'},
+    {slug:'rivian',         name:'Rivian'},
+    {slug:'jobyaviation',   name:'Joby Aviation'},
+  ];
+
+  const LEVER_BOARDS = [
+    // Data / Cloud
+    {slug:'hex-technologies', name:'Hex'},
+    {slug:'metabase',         name:'Metabase'},
+    {slug:'prefecthq',        name:'Prefect'},
+    {slug:'monte-carlo-data', name:'Monte Carlo'},
+    {slug:'singlestore',      name:'SingleStore'},
+    {slug:'alluxio',          name:'Alluxio'},
+    {slug:'whylabs',          name:'WhyLabs'},
+    {slug:'gretel-ai',        name:'Gretel AI'},
+    // Tech
+    {slug:'netlify',          name:'Netlify'},
+    {slug:'replit',           name:'Replit'},
+    {slug:'zapier',           name:'Zapier'},
+    {slug:'airtable',         name:'Airtable'},
+    {slug:'retool',           name:'Retool'},
+    {slug:'vercel',           name:'Vercel'},
+    {slug:'linear',           name:'Linear'},
+    {slug:'loom',             name:'Loom'},
+    {slug:'miro',             name:'Miro'},
+    // Fintech / Other
+    {slug:'watershed',        name:'Watershed'},
+    {slug:'humane',           name:'Humane'},
+    {slug:'weights-biases',   name:'Weights & Biases'},
+    {slug:'deepmind',         name:'DeepMind'},
+    {slug:'neon',             name:'Neon'},
+  ];
+
+  const ASHBY_BOARDS = [
+    // Data-first companies
+    {slug:'AirbyteIO',        name:'Airbyte'},
+    {slug:'MonteCarloData',   name:'Monte Carlo'},
+    {slug:'PostHog',          name:'PostHog'},
+    {slug:'Hex',              name:'Hex'},
+    {slug:'Metabase',         name:'Metabase'},
+    {slug:'Prefect',          name:'Prefect'},
+    {slug:'Hightouch',        name:'Hightouch'},
+    {slug:'Cube',             name:'Cube'},
+    {slug:'Census',           name:'Census'},
+    {slug:'GrowthBook',       name:'GrowthBook'},
+    // Tech startups
+    {slug:'Linear',           name:'Linear'},
+    {slug:'Retool',           name:'Retool'},
+    {slug:'Vanta',            name:'Vanta'},
+    {slug:'Notion',           name:'Notion'},
+    {slug:'Ramp',             name:'Ramp'},
+    {slug:'Loom',             name:'Loom'},
+    {slug:'Vercel',           name:'Vercel'},
+    {slug:'Replit',           name:'Replit'},
+    {slug:'Watershed',        name:'Watershed'},
+    {slug:'Rippling',         name:'Rippling'},
+  ];
+
+  const allCandidates = [];
+  const seenIds = new Set();
+
+  // Helper to add a candidate job (dedup by url)
+  function addCandidate(job){
+    const key = job.url;
+    if(seenIds.has(key)) return;
+    seenIds.add(key);
+    allCandidates.push({
+      ...job,
+      applied: prevJobs[job.id]?.applied||false,
+      tailored: prevJobs[job.id]?.tailored||null,
+      linkStatus: null, score:0, _match:null
+    });
+  }
+
+  // ── SCAN GREENHOUSE ──
+  for(let i=0; i<GREENHOUSE_BOARDS.length; i++){
+    const board = GREENHOUSE_BOARDS[i];
+    S.searchProgress = 2 + Math.floor(i/GREENHOUSE_BOARDS.length * 25);
+    S.searchStatus = `Greenhouse: scanning ${board.name} (${i+1}/${GREENHOUSE_BOARDS.length})…`;
+    render();
+    try{
+      const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board.slug}/jobs`,
+        {signal:AbortSignal.timeout(5000)});
+      if(!res.ok) continue;
+      const data = await res.json();
+      (data.jobs||[]).forEach(j=>{
+        if(!isTitleDE(j.title)) return;
+        if(!isUSA(j.location?.name||'')) return;
+        const id = `gh_${board.slug}_${j.id}`;
+        addCandidate({
+          id, role:j.title, company:board.name,
+          loc:j.location?.name||'Remote',
+          pay:'See posting', src:'Greenhouse', board:'Greenhouse',
+          url:j.absolute_url,
+          referral:`careers@${board.slug}.com`,
+          postedAt:j.updated_at?new Date(j.updated_at).getTime():Date.now()
+        });
+      });
+    }catch(e){}
+  }
+
+  // ── SCAN LEVER ──
+  for(let i=0; i<LEVER_BOARDS.length; i++){
+    const board = LEVER_BOARDS[i];
+    S.searchProgress = 27 + Math.floor(i/LEVER_BOARDS.length * 15);
+    S.searchStatus = `Lever: scanning ${board.name} (${i+1}/${LEVER_BOARDS.length})…`;
+    render();
+    try{
+      const res = await fetch(`https://api.lever.co/v0/postings/${board.slug}?mode=json`,
+        {signal:AbortSignal.timeout(5000)});
+      if(!res.ok) continue;
+      const jobs = await res.json();
+      (Array.isArray(jobs)?jobs:[]).forEach(j=>{
+        if(!isTitleDE(j.text||'')) return;
+        const loc = j.categories?.location||j.location||'';
+        if(!isUSA(loc)) return;
+        const id = `lv_${board.slug}_${j.id}`;
+        addCandidate({
+          id, role:j.text, company:board.name,
+          loc:loc||'Remote',
+          pay:j.salaryRange?`$${j.salaryRange.min}–$${j.salaryRange.max}`:'See posting',
+          src:'Lever', board:'Lever',
+          url:j.hostedUrl||`https://jobs.lever.co/${board.slug}/${j.id}`,
+          referral:`careers@${board.slug}.com`,
+          postedAt:j.createdAt||Date.now()
+        });
+      });
+    }catch(e){}
+  }
+
+  // ── SCAN ASHBY ──
+  for(let i=0; i<ASHBY_BOARDS.length; i++){
+    const board = ASHBY_BOARDS[i];
+    S.searchProgress = 42 + Math.floor(i/ASHBY_BOARDS.length * 15);
+    S.searchStatus = `Ashby: scanning ${board.name} (${i+1}/${ASHBY_BOARDS.length})…`;
+    render();
+    try{
+      const res = await fetch(
+        `https://api.ashbyhq.com/posting-api/job-board/${board.slug}?includeCompensation=true`,
+        {signal:AbortSignal.timeout(5000)});
+      if(!res.ok) continue;
+      const data = await res.json();
+      (data.jobs||[]).forEach(j=>{
+        if(!isTitleDE(j.title||'')) return;
+        const loc = j.location||j.address?.addressLocality||'';
+        if(!isUSA(loc)) return;
+        const id = `ash_${board.slug}_${j.id||j.jobUrl}`;
+        const pay = j.compensation?.compensationTierSummary||'See posting';
+        addCandidate({
+          id, role:j.title, company:board.name,
+          loc:loc||'Remote',
+          pay, src:'Ashby', board:'Ashby',
+          url:j.jobUrl||j.applyUrl,
+          referral:`careers@${board.slug.toLowerCase()}.com`,
+          postedAt:j.publishedAt?new Date(j.publishedAt).getTime():Date.now()
+        });
+      });
+    }catch(e){}
+  }
+
+  S.searchStatus = `Found ${allCandidates.length} title-matched DE candidates — fetching JDs & scoring…`;
+  S.searchProgress = 58;
+  render();
+
+  // ── FETCH JD + SCORE every candidate ──
+  const matched = [];
+
+  async function fetchJDAndScore(j){
+    try{
+      let desc = '', liveTitle = j.role;
+
+      if(j.src==='Greenhouse'){
+        const m = j.url.match(/greenhouse\.io\/([^\/\?]+)\/jobs\/(\d+)/);
+        if(!m) return;
+        const res = await fetch(
+          `https://boards-api.greenhouse.io/v1/boards/${m[1]}/jobs/${m[2]}?questions=true`,
+          {signal:AbortSignal.timeout(7000)});
+        if(!res.ok) return;
+        const d = await res.json();
+        if(!d.title) return;
+        liveTitle = d.title;
+        desc = (d.content||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+      }
+      else if(j.src==='Lever'){
+        const m = j.url.match(/lever\.co\/([^\/]+)\/([a-f0-9-]{36})/i);
+        if(!m) return;
+        const res = await fetch(`https://api.lever.co/v0/postings/${m[1]}/${m[2]}`,
+          {signal:AbortSignal.timeout(7000)});
+        if(!res.ok) return;
+        const d = await res.json();
+        liveTitle = d.text||j.role;
+        desc = [d.descriptionPlain||'',(d.lists||[]).map(l=>l.content||'').join(' '),d.additionalPlain||''].join(' ');
+      }
+      else if(j.src==='Ashby'){
+        // Ashby job board API already gives description in listing, re-fetch for full text
+        const res = await fetch(
+          `https://api.ashbyhq.com/posting-api/job-board/${j.url.split('/').slice(-2,-1)[0]}?includeCompensation=true`,
+          {signal:AbortSignal.timeout(7000)});
+        // Just use descriptionPlain if available from job object
+        desc = j.description||'';
+        // For Ashby, parse description from the posting page indirectly - use what we have
+        if(!desc){
+          // Try fetching the individual posting
+          try{
+            const slug = j.company.replace(/\s+/g,'');
+            const postRes = await fetch(
+              `https://api.ashbyhq.com/posting-api/job-board/${slug}?includeCompensation=true`,
+              {signal:AbortSignal.timeout(5000)});
+            if(postRes.ok){
+              const pd = await postRes.json();
+              const found = (pd.jobs||[]).find(jj=>jj.title===j.role);
+              if(found) desc = (found.descriptionHtml||found.descriptionPlain||'').replace(/<[^>]+>/g,' ');
+            }
+          }catch(e){}
         }
       }
-      if(url.includes('jobs.lever.co')){
-        const match = url.match(/jobs\.lever\.co\/([^\/]+)\/([a-f0-9-]{36})/i);
-        if(match){
-          const [,company,jobId] = match;
-          const res = await fetch(
-            `https://api.lever.co/v0/postings/${company}/${jobId}`,
-            {signal: AbortSignal.timeout(6000)}
-          );
-          if(!res.ok) return {live:false, score:0};
-          const data = await res.json();
-          const desc = [data.descriptionPlain||'',(data.lists||[]).map(l=>l.content||'').join(' '),data.additionalPlain||''].join(' ');
-          const score = scoreJD(data.text||title, desc);
-          return {live:true, score, description:desc, title:data.text};
-        }
-      }
-      return {live:true, score:0};
-    } catch(e){
-      return {live:false, score:0};
+
+      j.role = liveTitle;
+      j.description = desc;
+      j.linkStatus = true;
+
+      // Re-check title with real JD title
+      if(!isTitleDE(liveTitle)) return;
+      // Check experience level in JD
+      if(!isEntry(desc)) return;
+
+      const score = scoreJob(liveTitle, desc);
+      if(score < 7) return; // 7/10 minimum
+
+      j.score = score;
+      j._match = profileMatch(liveTitle, desc);
+      j.score = j._match.score >= 7 ? j._match.score : score;
+      if(j.score < 7) return;
+      matched.push(j);
+    }catch(e){
+      j.linkStatus = false;
     }
   }
 
-  let liveCount = 0;
-  const candidateJobs = []; // collect before scoring
-
-  for(let i=0; i<LIVE_BOARDS.length; i++){
-    const board = LIVE_BOARDS[i];
-    S.searchProgress = 3 + Math.floor(i/LIVE_BOARDS.length * 30);
-    S.searchStatus = `Scanning ${board.name} (${i+1}/${LIVE_BOARDS.length})…`;
-    render();
-    try {
-      const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board.company}/jobs`,
-        {signal: AbortSignal.timeout(5000)});
-      if(!res.ok) continue;
-      const data = await res.json();
-      // Smart pre-filter: keep jobs where title hints at data/engineering
-      // This narrows 7000+ jobs to ~300 candidates before expensive JD fetches
-      const DATA_HINTS = ['data','engineer','analyst','pipeline','etl','spark','sql',
-                          'analytics','platform','warehouse','bi ','intelligence',
-                          'ml','machine learn','cloud','azure','aws','gcp','databricks',
-                          'lakehouse','database','integration','backend','software'];
-      const HARD_SKIP  = ['sales','marketing','recruiter','hr ','human resource',
-                          'legal','finance','account','design','ux','ui ','product manager',
-                          'program manager','customer success','support','counsel',
-                          'physical','mechanical','hardware','electrical','chemical',
-                          'ios','android','mobile','react native'];
-      (data.jobs||[]).forEach(j=>{
-        const t = j.title.toLowerCase();
-        const loc = j.location?.name||'';
-        // Hard skip obviously wrong roles
-        if(HARD_SKIP.some(k=>t.includes(k))) return;
-        // Must have at least one data/engineering hint in title
-        if(!DATA_HINTS.some(k=>t.includes(k))) return;
-        // USA only
-        if(!isUSA(loc)) return;
-        const id = `live_${board.company}_${j.id}`;
-        if(!freshJobs.find(x=>x.id===id) && !candidateJobs.find(x=>x.id===id)){
-          candidateJobs.push({
-            id, role:j.title, company:board.name,
-            loc: j.location?.name||'Remote',
-            pay:'See posting', src:board.src, board:board.src,
-            score:0, url:j.absolute_url,
-            referral:`careers@${board.company.toLowerCase()}.com`,
-            applied:false, tailored:null, linkStatus:null,
-            postedAt: j.updated_at ? new Date(j.updated_at).getTime() : Date.now()
-          });
-        }
-      });
-    } catch(e){}
-  }
-
-  // ── STEP 2: Fetch JD + score against YOUR profile in batches ──
-  S.searchProgress = 35;
-  S.searchStatus = `Fetching ${candidateJobs.length} JDs and scoring against your profile…`;
-  render();
-
-  const scoredJobs = [];
-  for(let i=0; i<candidateJobs.length; i+=5){
-    const batch = candidateJobs.slice(i, i+5);
-    await Promise.allSettled(batch.map(async j=>{
-      // Only fetch JD for USA jobs (skip non-USA quickly)
-      if(!isUSA(j.loc)) return;
-      const result = await fetchAndScoreJob(j.url, j.role);
-      if(!result.live) return; // dead link
-      j.linkStatus = true;
-      if(result.description) j.description = result.description;
-      if(result.title) j.role = result.title; // use actual JD title
-      const jdScore = result.score;
-      if(jdScore > 0){ // JD matches your profile
-        j.score = Math.round(jdScore / 10); // 0-100 → 0-10
-        j._match = profileMatch(j.role, j.description||'');
-        // Override score with profile match score
-        j.score = j._match.score;
-        // Only keep jobs with match score ≥ 8/10
-        if(j.score >= 8) scoredJobs.push(j);
-      }
-    }));
-    S.searchProgress = 35 + Math.floor((i/candidateJobs.length)*55);
-    S.searchStatus = `Scored ${Math.min(i+5,candidateJobs.length)}/${candidateJobs.length} JDs — ${scoredJobs.length} matches so far…`;
+  // Process in batches of 8
+  for(let i=0; i<allCandidates.length; i+=8){
+    const batch = allCandidates.slice(i,i+8);
+    await Promise.allSettled(batch.map(fetchJDAndScore));
+    S.searchProgress = 58 + Math.floor((i/Math.max(allCandidates.length,1))*38);
+    S.searchStatus = `Scored ${Math.min(i+8,allCandidates.length)}/${allCandidates.length} JDs — ${matched.length} matches (≥7/10) so far…`;
     render();
   }
 
-  // Sort by match score descending, take top results
-  scoredJobs.sort((a,b)=>(b._match?.matchPct||0)-(a._match?.matchPct||0));
-  const topMatches = scoredJobs.slice(0, 20); // show top 20 matches
+  // Sort by profile match score desc, then by date
+  matched.sort((a,b)=>(b._match?.matchPct||0)-(a._match?.matchPct||0)||(b.postedAt||0)-(a.postedAt||0));
 
-  // ── STEP 2: Verify every link — also fetches full JD for profile matching ──
-  S.searchProgress = 45;
-  S.searchStatus = `Fetching ${freshJobs.length} job descriptions for skill matching…`;
-  render();
-
-  const verifyBatch = async (jobs) => {
-    const results = await Promise.allSettled(
-      jobs.map(async j => {
-        const check = await verifyLink(j.url);
-        j.linkStatus = check.live;
-        j.linkReason = check.reason;
-        // Attach real JD text — used for accurate profile match scoring
-        if(check.description) {
-          j.description = check.description;
-          // Recompute profile match with full JD text
-          j._match = profileMatch(j.role, j.description);
-          // Update score from match if better
-          if(j._match.score > (j.score||0)) j.score = j._match.score;
-        }
-        return j;
-      })
-    );
-    return results.map(r => r.status==='fulfilled'?r.value:null).filter(Boolean);
-  };
-
-  for(let i=0; i<freshJobs.length; i+=4){
-    const batch = freshJobs.slice(i, i+4);
-    await verifyBatch(batch);
-    S.searchProgress = 45 + Math.floor((i/freshJobs.length)*40);
-    S.searchStatus = `Fetched JD + verified ${Math.min(i+4, freshJobs.length)}/${freshJobs.length}…`;
-    render();
-  }
-
-  // ── STEP 3: Merge with seed jobs, filter dead links, sort by match ──
-  const allJobs = [...freshJobs, ...topMatches];
-  // Deduplicate by id
-  const seen = new Set();
-  const deduped = allJobs.filter(j=>{ if(seen.has(j.id)) return false; seen.add(j.id); return true; });
-  
-  // For seed jobs that didn't go through JD fetch, verify them now
-  const unseenSeeds = deduped.filter(j=>j.linkStatus===null);
-  await Promise.allSettled(unseenSeeds.map(async j=>{
-    const result = await fetchAndScoreJob(j.url, j.role);
-    j.linkStatus = result.live;
-    if(result.description){ j.description = result.description; j._match = profileMatch(j.role, j.description); j.score = j._match?.score||j.score; }
-  }));
-
-  const liveJobs  = deduped.filter(j=>j.linkStatus !== false);
-  const deadCount = deduped.filter(j=>j.linkStatus === false).length;
-  // Sort: highest profile match first
-  liveJobs.sort((a,b)=>(b._match?.matchPct||0)-(a._match?.matchPct||0));
-
-  S.searchProgress = 98;
-  S.searchStatus = `✅ ${liveJobs.length} jobs matched your profile · ❌ ${deadCount} dead/irrelevant removed`;
-  render();
-  await new Promise(r=>setTimeout(r,600));
-
-  S.jobs = liveJobs;
+  S.jobs = matched;
   S.searching = false;
   S.searchProgress = 100;
+  S.searchStatus = `Done — ${matched.length} data engineering jobs matched your profile (≥7/10)`;
   render();
 }
 
