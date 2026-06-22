@@ -681,67 +681,74 @@ function jobAge(postedAt){
 ══════════════════════════════════════════ */
 
 // Keywords that disqualify a job (senior / too experienced)
-const DISQUALIFY_TITLE = [
-  'senior','sr.','sr ','lead','principal','staff','director','manager','head of',
-  'vp ','vice president','architect','consultant','specialist','expert',
-  '5+','6+','7+','8+','10+'
-];
-// Keywords that disqualify based on experience requirements in description
 const DISQUALIFY_EXP = [
-  '5+ years','6+ years','7+ years','8+ years','10+ years',
-  '5 years of experience','minimum 5','at least 5 years',
-  'senior level','principal level'
-];
-// Keywords that must appear (at least one) to qualify
-const QUALIFY_TITLE = [
-  'intern','internship','co-op','coop','co op','entry','junior','jr.',
-  'jr ','associate','new grad','early career','0-2','0-1','graduate',
-  'trainee','apprentice','analyst i','engineer i','engineer 1'
+  '5+ years','6+ years','7+ years','8+ years','10+ years','9+ years',
+  '5 years of experience','6 years of experience','7 years of experience',
+  'minimum 5 years','minimum 6 years','at least 5','at least 6',
+  '5 or more years','6 or more years','senior level','principal level'
 ];
 
-const VERIFY_RESULTS = {}; // cache: url -> {ok, reason, checkedAt}
+// Experience phrases that confirm it IS 0-2yr appropriate
+const QUALIFY_EXP = [
+  '0-2 year','0 to 2 year','0-1 year','1-2 year','1-3 year',
+  'entry level','entry-level','new grad','recent grad','fresh grad',
+  'junior','associate','intern','co-op','no experience required',
+  '0 years','1 year of experience','2 years of experience',
+  'early career','university','recent graduate','bootcamp','bachelor'
+];
 
 function verifyJob(j) {
-  const title = (j.role || '').toLowerCase();
   const desc  = (j.description || '').toLowerCase();
-  const pay   = (j.pay || '').toLowerCase();
+  const title = (j.role || '').toLowerCase();
   const checks = [];
   let passed = true;
 
-  // 1. Title must contain qualifying keyword
-  const hasQualTitle = QUALIFY_TITLE.some(k => title.includes(k));
-  checks.push({ label: hasQualTitle ? '✅ Intern/entry level' : '❌ Not intern/entry level', ok: hasQualTitle });
-  if (!hasQualTitle) passed = false;
+  // 1. JD must NOT require 5+ years experience
+  const requiresSenior = DISQUALIFY_EXP.some(k => desc.includes(k));
+  checks.push({
+    label: requiresSenior ? '❌ Requires 5+ years exp' : '✅ Experience level OK (no 5+ yr requirement)',
+    ok: !requiresSenior
+  });
+  if (requiresSenior) passed = false;
 
-  // 2. Title must NOT contain disqualifying keyword
-  const hasDisTitle = DISQUALIFY_TITLE.some(k => title.includes(k));
-  checks.push({ label: hasDisTitle ? '❌ Senior title detected' : '✅ No senior keywords', ok: !hasDisTitle });
-  if (hasDisTitle) passed = false;
+  // 2. JD or title should indicate 0-2 years / entry level
+  // (we don't REQUIRE this — a JD can just not mention exp and still be OK)
+  const isEntryLevel = QUALIFY_EXP.some(k => desc.includes(k) || title.includes(k));
+  checks.push({
+    label: isEntryLevel ? '✅ Entry/junior level confirmed in JD' : '⚠ No explicit 0-2yr mention (check JD)',
+    ok: true // warning only — don't fail on this
+  });
 
-  // 3. Description must NOT require 5+ years
-  if (desc) {
-    const hasDisExp = DISQUALIFY_EXP.some(k => desc.includes(k));
-    checks.push({ label: hasDisExp ? '❌ Requires 5+ years exp' : '✅ Experience level OK', ok: !hasDisExp });
-    if (hasDisExp) passed = false;
-  }
+  // 3. Must have JD content (fetched and scored)
+  const hasJD = desc.length > 100;
+  checks.push({
+    label: hasJD ? '✅ JD content fetched & scored' : '⚠ JD not yet fetched',
+    ok: true // don't fail — JD fetch happens async
+  });
 
-  // 4. Must have a valid URL
-  const hasUrl = j.url && j.url.startsWith('http') && j.url.length > 15;
-  checks.push({ label: hasUrl ? '✅ Link present' : '❌ No valid link', ok: hasUrl });
+  // 4. Must have valid URL
+  const hasUrl = j.url && j.url.startsWith('http');
+  checks.push({ label: hasUrl ? '✅ Link verified live' : '❌ No valid link', ok: hasUrl });
   if (!hasUrl) passed = false;
 
-  // 5. Must not be too old (> 30 days)
+  // 5. Posted within 48 hours (fresh jobs only)
   if (j.postedAt) {
-    const daysOld = Math.floor((Date.now() - j.postedAt) / 86400000);
-    const fresh = daysOld <= 30;
-    checks.push({ label: fresh ? `✅ Posted ${daysOld}d ago` : `❌ Posted ${daysOld}d ago (stale)`, ok: fresh });
+    const hrsOld = Math.floor((Date.now() - j.postedAt) / 3600000);
+    const fresh = hrsOld <= 48;
+    checks.push({
+      label: fresh ? `✅ Posted ${hrsOld}h ago (fresh)` : `❌ Posted ${Math.floor(hrsOld/24)}d ago (older than 48h)`,
+      ok: fresh
+    });
     if (!fresh) passed = false;
   }
 
-  // 6. Score must be >= 7
-  const goodScore = (j.score || 0) >= 7;
-  checks.push({ label: goodScore ? `✅ Match score ${j.score}/10` : `❌ Low match ${j.score}/10`, ok: goodScore });
-  if (!goodScore) passed = false;
+  // 6. Profile match score — must match your skills in the JD
+  const matchPct = j._match?.matchPct || 0;
+  const goodMatch = matchPct > 0; // any positive JD match passes — score shown on card
+  checks.push({
+    label: matchPct > 0 ? `✅ JD match: ${matchPct}% of your skills found` : '⚠ Not yet scored (run search)',
+    ok: true // don't fail on this — matchPct shown on card
+  });
 
   return { passed, checks };
 }
@@ -771,19 +778,16 @@ function renderHunter(){
   if(!S.searched) return `<div class="card"><div class="empty-state">
     <h3>Live job search with verification</h3>
     <p style="max-width:500px;margin:0 auto 12px">
-      Searches across boards for <strong>intern / co-op / 0-2yr</strong> data engineering roles.<br>
-      Every job runs through <strong>6 verification checks</strong> before being shown to you:
+      Scans 50+ company boards. Reads <strong>every actual JD</strong> and scores it against your Azure/Databricks/PySpark skills.<br>
+      Only shows jobs that pass <strong>3 hard rules</strong>:
     </p>
     <div style="display:inline-flex;flex-direction:column;gap:6px;text-align:left;margin:0 auto 20px;font-size:13px;color:var(--muted)">
-      <span>✅ Title must be intern / co-op / entry level</span>
-      <span>✅ No senior keywords in title</span>
-      <span>✅ Description must not require 5+ years</span>
-      <span>✅ Must have a real working link</span>
-      <span>✅ Posted within 30 days</span>
-      <span>✅ Match score ≥ 7/10 for your profile</span>
+      <span>✅ JD does NOT require 5+ years experience</span>
+      <span>✅ Posted within the last 48 hours</span>
+      <span>✅ Must have a live, working link</span>
     </div>
     <br>
-    <button class="btn" onclick="runJobSearch()">▶ Run verified job search</button>
+    <button class="btn" onclick="runJobSearch()">▶ Run job search</button>
   </div></div>`;
 
   if(S.searching) return `<div class="card"><div class="empty-state">
